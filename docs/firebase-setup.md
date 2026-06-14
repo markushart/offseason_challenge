@@ -49,14 +49,16 @@ Firebase web config values are not treated like server secrets. They identify th
 ## Suggested Frontend Firebase Module
 
 The app now includes a Firebase client module at `offseason_challenge/lib/firebase.ts`.
-It initializes Firebase Auth from the public Next environment variables and can connect
-to the Auth emulator when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`.
+It initializes Firebase Auth and Firestore from the public Next environment variables
+and can connect to the Auth and Firestore emulators when
+`NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`.
 
 The current Auth-focused version follows this shape:
 
 ```ts
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -69,9 +71,11 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 
 if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true") {
   connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
 ```
 
@@ -90,10 +94,9 @@ if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true") {
 Install the Firebase CLI if needed, then:
 
 ```sh
-firebase login
-firebase init
-firebase emulators:start
-firebase deploy --only firestore:rules,firestore:indexes,storage
+npx -y firebase-tools@latest login
+npx -y firebase-tools@latest emulators:start
+npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage
 ```
 
 Use `firebase init` carefully: keep the existing `firebase.json`, `firestore.rules`, and `storage.rules` unless you intentionally want to regenerate them.
@@ -109,6 +112,13 @@ The initial rules are strict by default:
 - Proof uploads are scoped to `competitions/{competitionId}/proofs/{userId}/{fileName}`.
 - Deletes are disabled for core Firestore data in the first draft.
 - Participants cannot add themselves to arbitrary competitions through direct client writes.
+
+The current checked-in `firestore.rules` file covers the first admin workflow:
+
+- A signed-in user can create a competition and becomes its sole initial admin.
+- Competition admins can create teams, invite codes, and fixed-point activity rules.
+- Invite codes are admin-readable only until a secure invite acceptance flow exists.
+- Direct self-enrollment is blocked.
 
 The current activity log rule allows clients to submit `calculatedPoints` and requires `finalPoints` to match. This is acceptable for an early prototype, but not strong enough for a competitive production app. The production version should either calculate final points in Cloud Functions or validate every point rule in Security Rules.
 

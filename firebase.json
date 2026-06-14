@@ -1,6 +1,9 @@
 {
   "hosting": {
     "public": "offseason_challenge/out",
+    "predeploy": [
+      "npm --prefix offseason_challenge run ci"
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -11,5 +14,9 @@
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

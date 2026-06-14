@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci --prefix offseason_challenge && npm run build --prefix offseason_challenge
+      - run: npm ci --prefix offseason_challenge && npm run ci --prefix offseason_challenge
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,14 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { auth, hasFirebaseConfig } from "@/lib/firebase";
 
 type AuthShellProps = {
@@ -21,6 +28,18 @@ const getAuthMessage = (error: unknown) => {
 
   return "Google sign-up failed. Please try again.";
 };
+
+const SignedInUserContext = createContext<User | null>(null);
+
+export function useSignedInUser() {
+  const user = useContext(SignedInUserContext);
+
+  if (!user) {
+    throw new Error("useSignedInUser must be used below AuthShell.");
+  }
+
+  return user;
+}
 
 export function AuthShell({ children }: AuthShellProps) {
   const [user, setUser] = useState<User | null>(null);
@@ -83,22 +102,22 @@ export function AuthShell({ children }: AuthShellProps) {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-stone-50 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
-        <section className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+      <main className="min-h-screen bg-stone-50 px-3 py-4 text-zinc-950 sm:px-6 sm:py-6 lg:px-8">
+        <section className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-6xl items-center gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-emerald-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 sm:text-sm">
               Offseason Challenge
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-normal sm:text-5xl">
-              Sign up to join your team competition.
+            <h1 className="mt-3 text-3xl font-semibold tracking-normal sm:text-5xl">
+              Sign up for your team challenge.
             </h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-zinc-600">
-              Create your account with Google, then track trainings, runs, gym
-              sessions, proof uploads, and team standings from one dashboard.
+            <p className="mt-3 max-w-xl text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
+              Create your account with Google, then manage trainings, activities,
+              proof uploads, and team standings from your phone.
             </p>
           </div>
 
-          <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
             <h2 className="text-xl font-semibold">Create your account</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
               Google sign-up creates a Firebase Auth user for this app. Team
@@ -136,8 +155,8 @@ export function AuthShell({ children }: AuthShellProps) {
   }
 
   return (
-    <>
-      <header className="border-b border-zinc-200 bg-white px-4 py-3 text-zinc-950 sm:px-6 lg:px-8">
+    <SignedInUserContext.Provider value={user}>
+      <header className="border-b border-zinc-200 bg-white px-3 py-3 text-zinc-950 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-800">
@@ -149,7 +168,7 @@ export function AuthShell({ children }: AuthShellProps) {
             </div>
           </div>
           <button
-            className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-semibold transition hover:bg-zinc-50"
+            className="h-11 w-full rounded-md border border-zinc-300 px-4 text-sm font-semibold transition hover:bg-zinc-50 sm:h-10 sm:w-auto"
             onClick={handleSignOut}
             type="button"
           >
@@ -158,6 +177,6 @@ export function AuthShell({ children }: AuthShellProps) {
         </div>
       </header>
       {children}
-    </>
+    </SignedInUserContext.Provider>
   );
 }
