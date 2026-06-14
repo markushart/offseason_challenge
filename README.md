@@ -11,3 +11,4 @@ Participants create accounts, join competitions, get assigned to teams, log comp
 - [Firebase data model draft](docs/firebase-data-model.md)
 - [Implementation roadmap](docs/roadmap.md)
 - [Project progress](docs/progress.md)
+- [Development workflow](docs/development.md)

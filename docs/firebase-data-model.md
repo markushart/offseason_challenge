@@ -116,6 +116,29 @@ An invite may optionally preselect a team. If `teamId` is null, the participant 
 
 Activity rules should be copied from a template into each competition. This gives every competition a stable scoring snapshot even if global templates are changed later.
 
+The current admin UI can create fixed-point custom activity rules first:
+
+```json
+{
+  "name": "Normal team training",
+  "category": "team_training",
+  "enabled": true,
+  "inputType": "completion",
+  "scoring": {
+    "type": "fixed",
+    "points": 10
+  },
+  "limits": {
+    "countsTowardWeeklyExtraCap": true
+  },
+  "requiresProof": false,
+  "createdAt": "serverTimestamp",
+  "updatedAt": "serverTimestamp"
+}
+```
+
+The broader target model still supports richer rule types:
+
 ```json
 {
   "name": "Running / Jogging",

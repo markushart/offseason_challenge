@@ -9,8 +9,9 @@
 - Firebase Hosting is configured to serve the static Next export from `offseason_challenge/out`.
 - The first signed-in page is a challenge admin workflow for creating challenges, teams, invites, and fixed-point activity rules.
 - Frontend design should be mobile-first because the app will mostly be used on phones.
+- Lightweight automated testing is required for new development before deployment.
 - Requirements and architecture docs have been added under `docs/`.
-- A draft Firebase configuration has been added for local development and future deployment.
+- Firebase configuration has been added for local development and deployment.
 
 ## Completed
 
@@ -31,6 +32,9 @@
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.
 - Updated Firebase Hosting workflows to run lint, tests, and build before deploy.
+- Added Firebase Hosting `predeploy` hook to run the same CI gate for manual Hosting deploys.
+- Deployed prototype Firestore rules and indexes for the first challenge-admin workflow.
+- Added `docs/development.md` with current commands, testing rules, and deployment notes.
 
 ## In Progress
 
@@ -45,7 +49,7 @@
 - Firestore profile creation after first sign-in.
 - Production-reviewed Firestore Security Rules.
 - Activity rule seed data.
-- Competition creation UI.
+- Competition creation UI beyond the initial admin workflow.
 - Invite flow.
 - Team management.
 - Activity submission UI.
@@ -57,5 +61,6 @@
 - The current scoring rules are based on the PDF created on 2026-05-19.
 - Firestore exists as the `(default)` database in Standard / native mode in location `nam5`.
 - Current Firestore rules are prototype rules and should be reviewed before broad app sharing.
+- Current activity management supports fixed-point custom activities only. Threshold, choice, manual range, and bonus rule editing are still future work.
 - Firebase JSON config has been validated with `jq`.
 - Firebase Emulator Suite validation has not run yet because `java` is not installed or not available on `PATH`.

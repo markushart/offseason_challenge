@@ -96,6 +96,7 @@ Install the Firebase CLI if needed, then:
 ```sh
 npx -y firebase-tools@latest login
 npx -y firebase-tools@latest emulators:start
+npm run ci --prefix offseason_challenge
 npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage
 ```
 
@@ -119,6 +120,12 @@ The current checked-in `firestore.rules` file covers the first admin workflow:
 - Competition admins can create teams, invite codes, and fixed-point activity rules.
 - Invite codes are admin-readable only until a secure invite acceptance flow exists.
 - Direct self-enrollment is blocked.
+
+Run this before deploying rule changes:
+
+```sh
+npx -y firebase-tools@latest deploy --only firestore:rules --dry-run
+```
 
 The current activity log rule allows clients to submit `calculatedPoints` and requires `finalPoints` to match. This is acceptable for an early prototype, but not strong enough for a competitive production app. The production version should either calculate final points in Cloud Functions or validate every point rule in Security Rules.
 
