@@ -4,6 +4,11 @@ import {
   getAuth,
   type Auth,
 } from "firebase/auth";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  type Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -29,9 +34,11 @@ export const app: FirebaseApp | null = hasFirebaseConfig
   : null;
 
 export const auth: Auth | null = app ? getAuth(app) : null;
+export const db: Firestore | null = app ? getFirestore(app) : null;
 
 type EmulatorWindow = Window & {
   __OFFSEASON_AUTH_EMULATOR_CONNECTED__?: boolean;
+  __OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__?: boolean;
 };
 
 if (
@@ -46,5 +53,10 @@ if (
       disableWarnings: true,
     });
     emulatorWindow.__OFFSEASON_AUTH_EMULATOR_CONNECTED__ = true;
+  }
+
+  if (db && !emulatorWindow.__OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__) {
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    emulatorWindow.__OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__ = true;
   }
 }

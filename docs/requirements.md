@@ -161,7 +161,8 @@ The frontend may still contain TypeScript types and default seed data, but runti
 - Firestore Security Rules must enforce competition membership and admin permissions.
 - Scoring should be deterministic and testable.
 - Competition data should be separated so users can participate in multiple competitions later.
-- The application should work well on mobile because participants will likely log activities from phones.
+- Mobile-first UX is a primary product requirement. The app will mostly be used on phones by participants and admins, so every core flow must be designed for small screens first, with large touch targets, single-column forms, concise copy, and desktop layouts treated as progressive enhancement.
+- Every new feature or behavior change must include at least lightweight automated test coverage before deployment. Frontend deploys must pass lint, tests, and production build through `npm run ci --prefix offseason_challenge`.
 
 ## Open Questions
 

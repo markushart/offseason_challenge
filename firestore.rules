@@ -1,0 +1,324 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: competitions
+    // Document ID: generated competition ID
+    // Fields:
+    //   - name: string, 2-80 chars
+    //   - description: string, 0-240 chars
+    //   - createdBy: auth UID, immutable
+    //   - adminIds: list with creator UID in first version
+    //   - status: draft|active|completed|archived
+    //   - settings: map with approval/proof/week/team settings
+    //   - createdAt: timestamp, immutable
+    //   - updatedAt: timestamp
+    //
+    // Subcollections:
+    //   - members/{userId}
+    //   - teams/{teamId}
+    //   - invites/{inviteId}
+    //   - activityRules/{activityRuleId}
+    //
+    // ===============================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAuthenticated() {
+      return signedIn();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function competitionPath(competitionId) {
+      return /databases/$(database)/documents/competitions/$(competitionId);
+    }
+
+    function memberPath(competitionId, userId) {
+      return /databases/$(database)/documents/competitions/$(competitionId)/members/$(userId);
+    }
+
+    function isCompetitionAdmin(competitionId) {
+      return signedIn() &&
+        exists(competitionPath(competitionId)) &&
+        request.auth.uid in get(competitionPath(competitionId)).data.adminIds;
+    }
+
+    function isCompetitionAdminAfter(competitionId) {
+      return signedIn() &&
+        request.auth.uid in getAfter(competitionPath(competitionId)).data.adminIds;
+    }
+
+    function isCompetitionMember(competitionId) {
+      return signedIn() &&
+        exists(memberPath(competitionId, request.auth.uid)) &&
+        get(memberPath(competitionId, request.auth.uid)).data.status == "active";
+    }
+
+    function canReadCompetition(competitionId) {
+      return isCompetitionAdmin(competitionId) || isCompetitionMember(competitionId);
+    }
+
+    function validString(value, minSize, maxSize) {
+      return value is string && value.size() >= minSize && value.size() <= maxSize;
+    }
+
+    function validNullableString(value, maxSize) {
+      return value == null || (value is string && value.size() <= maxSize);
+    }
+
+    function validSettings(settings) {
+      return settings is map &&
+        settings.keys().hasOnly([
+          "activityApprovalMode",
+          "proofRequired",
+          "weekStartsOn",
+          "allowMoreThanTwoTeams"
+        ]) &&
+        settings.activityApprovalMode in ["auto", "review"] &&
+        settings.proofRequired is bool &&
+        settings.weekStartsOn is int &&
+        settings.weekStartsOn >= 0 &&
+        settings.weekStartsOn <= 6 &&
+        settings.allowMoreThanTwoTeams is bool;
+    }
+
+    function validCompetition(data) {
+      return data.keys().hasOnly([
+          "name",
+          "description",
+          "createdBy",
+          "adminIds",
+          "status",
+          "settings",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validString(data.name, 2, 80) &&
+        validString(data.description, 0, 240) &&
+        data.createdBy is string &&
+        data.adminIds is list &&
+        data.adminIds.size() >= 1 &&
+        data.adminIds.size() <= 20 &&
+        data.status in ["draft", "active", "completed", "archived"] &&
+        validSettings(data.settings) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validCompetitionCreate(data) {
+      return validCompetition(data) &&
+        data.createdBy == request.auth.uid &&
+        data.adminIds.size() == 1 &&
+        data.adminIds[0] == request.auth.uid &&
+        data.status == "draft" &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function validCompetitionUpdate(data) {
+      return validCompetition(data) &&
+        data.createdBy == resource.data.createdBy &&
+        data.adminIds == resource.data.adminIds &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time;
+    }
+
+    function validMember(data, userId) {
+      return data.keys().hasOnly([
+          "userId",
+          "displayNameSnapshot",
+          "emailSnapshot",
+          "teamId",
+          "role",
+          "status",
+          "joinedAt",
+          "invitedBy"
+        ]) &&
+        data.userId == userId &&
+        validString(data.displayNameSnapshot, 1, 80) &&
+        validNullableString(data.emailSnapshot, 160) &&
+        validNullableString(data.teamId, 128) &&
+        data.role in ["admin", "participant"] &&
+        data.status in ["invited", "active", "removed"] &&
+        data.joinedAt is timestamp &&
+        validNullableString(data.invitedBy, 128);
+    }
+
+    function validMemberCreate(data, userId) {
+      return validMember(data, userId) &&
+        data.joinedAt == request.time &&
+        (
+          data.role == "participant" ||
+          (data.role == "admin" && userId == request.auth.uid)
+        );
+    }
+
+    function validMemberUpdate(data, userId) {
+      return validMember(data, userId) &&
+        data.userId == resource.data.userId &&
+        data.joinedAt == resource.data.joinedAt &&
+        (
+          data.role == resource.data.role ||
+          data.role == "participant"
+        );
+    }
+
+    function validTeam(data) {
+      return data.keys().hasOnly(["name", "color", "createdAt", "updatedAt"]) &&
+        validString(data.name, 2, 50) &&
+        data.color is string &&
+        data.color.matches("^#[0-9a-fA-F]{6}$") &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validTeamCreate(data) {
+      return validTeam(data) &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function validTeamUpdate(data) {
+      return validTeam(data) &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time;
+    }
+
+    function validInvite(data) {
+      return data.keys().hasOnly([
+          "code",
+          "createdBy",
+          "teamId",
+          "maxUses",
+          "usedCount",
+          "expiresAt",
+          "createdAt",
+          "disabledAt"
+        ]) &&
+        data.code is string &&
+        data.code.matches("^[A-Z0-9]{6}$") &&
+        data.createdBy is string &&
+        validNullableString(data.teamId, 128) &&
+        (data.maxUses == null || (data.maxUses is int && data.maxUses >= 1 && data.maxUses <= 1000)) &&
+        data.usedCount is int &&
+        data.usedCount >= 0 &&
+        (data.expiresAt == null || data.expiresAt is timestamp) &&
+        data.createdAt is timestamp &&
+        (data.disabledAt == null || data.disabledAt is timestamp);
+    }
+
+    function validInviteCreate(data) {
+      return validInvite(data) &&
+        data.createdBy == request.auth.uid &&
+        data.usedCount == 0 &&
+        data.createdAt == request.time &&
+        data.disabledAt == null;
+    }
+
+    function validInviteUpdate(data) {
+      return validInvite(data) &&
+        data.code == resource.data.code &&
+        data.createdBy == resource.data.createdBy &&
+        data.createdAt == resource.data.createdAt;
+    }
+
+    function validActivityRule(data) {
+      return data.keys().hasOnly([
+          "name",
+          "category",
+          "enabled",
+          "inputType",
+          "scoring",
+          "limits",
+          "requiresProof",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validString(data.name, 2, 80) &&
+        validString(data.category, 2, 40) &&
+        data.enabled is bool &&
+        data.inputType == "completion" &&
+        data.scoring is map &&
+        data.scoring.keys().hasOnly(["type", "points"]) &&
+        data.scoring.type == "fixed" &&
+        data.scoring.points is int &&
+        data.scoring.points >= 1 &&
+        data.scoring.points <= 50 &&
+        data.limits is map &&
+        data.limits.keys().hasOnly(["countsTowardWeeklyExtraCap"]) &&
+        data.limits.countsTowardWeeklyExtraCap is bool &&
+        data.requiresProof is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validActivityRuleCreate(data) {
+      return validActivityRule(data) &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function validActivityRuleUpdate(data) {
+      return validActivityRule(data) &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time;
+    }
+
+    match /competitions/{competitionId} {
+      allow read: if canReadCompetition(competitionId);
+      allow create: if signedIn() && validCompetitionCreate(request.resource.data);
+      allow update: if isCompetitionAdmin(competitionId) &&
+        validCompetitionUpdate(request.resource.data);
+      allow delete: if false;
+
+      match /members/{userId} {
+        allow read: if isCompetitionAdmin(competitionId) || isOwner(userId);
+        allow create: if isCompetitionAdminAfter(competitionId) &&
+          validMemberCreate(request.resource.data, userId);
+        allow update: if isCompetitionAdmin(competitionId) &&
+          validMemberUpdate(request.resource.data, userId);
+        allow delete: if false;
+      }
+
+      match /teams/{teamId} {
+        allow read: if canReadCompetition(competitionId);
+        allow create: if isCompetitionAdmin(competitionId) &&
+          validTeamCreate(request.resource.data);
+        allow update: if isCompetitionAdmin(competitionId) &&
+          validTeamUpdate(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /invites/{inviteId} {
+        allow read: if isCompetitionAdmin(competitionId);
+        allow create: if isCompetitionAdmin(competitionId) &&
+          validInviteCreate(request.resource.data);
+        allow update: if isCompetitionAdmin(competitionId) &&
+          validInviteUpdate(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /activityRules/{activityRuleId} {
+        allow read: if canReadCompetition(competitionId);
+        allow create: if isCompetitionAdmin(competitionId) &&
+          validActivityRuleCreate(request.resource.data);
+        allow update: if isCompetitionAdmin(competitionId) &&
+          validActivityRuleUpdate(request.resource.data);
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

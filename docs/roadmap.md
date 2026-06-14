@@ -2,33 +2,34 @@
 
 ## Phase 0: Project Setup
 
-- Create React app structure.
-- Add TypeScript.
-- Add Firebase SDK.
-- Add environment configuration for Firebase project values.
-- Add routing and basic app shell.
-- Add linting, formatting, and test runner.
+- Create Next.js React app structure. Done.
+- Add TypeScript. Done.
+- Add Firebase SDK. Done.
+- Add environment configuration for Firebase project values. Done.
+- Add basic app shell. Done.
+- Add linting and test runner. Done.
+- Keep `npm run ci --prefix offseason_challenge` as the required pre-deploy gate.
 
 ## Phase 1: Authentication and Profiles
 
-- Implement sign up, sign in, sign out.
+- Implement sign up, sign in, sign out. Google sign-in is done.
 - Create user profile document after registration.
-- Add protected routes.
-- Show current user state in the app shell.
+- Add protected routes / protected signed-in app shell. Initial Auth shell is done.
+- Show current user state in the app shell. Done.
 
 ## Phase 2: Competition Management
 
-- Create competition form.
-- Store creator as competition admin.
-- Add competition list for the signed-in user.
-- Add competition detail page.
-- Add team creation and editing.
+- Create competition form. Initial version done.
+- Store creator as competition admin. Done.
+- Add competition list for the signed-in user. Initial admin-owned list done.
+- Add competition detail page. Initial same-page admin management view done.
+- Add team creation and editing. Team creation done; editing not started.
 - Add member list.
-- Add admin-only controls.
+- Add admin-only controls. Initial Firestore rules and UI controls done for challenge admins.
 
 ## Phase 3: Invites and Team Assignment
 
-- Generate invite codes or links.
+- Generate invite codes or links. Initial invite code generation done.
 - Let participants join a competition through an invite, preferably through a callable Cloud Function.
 - Let admins assign participants to teams.
 - Prevent duplicate active membership for the same competition.
@@ -36,7 +37,7 @@
 ## Phase 4: Activity Catalog
 
 - Seed the activity rules from `rules.pdf`.
-- Store rules in Firestore under each competition.
+- Store rules in Firestore under each competition. Initial fixed-point custom activity rule creation done.
 - Load enabled activity rules into the activity submission UI.
 - Build reusable scoring functions for fixed, choice, thresholds, manual range, and bonus rules.
 
@@ -64,15 +65,25 @@
 
 ## Phase 8: Hardening
 
-- Write Firestore Security Rules.
+- Write Firestore Security Rules. Prototype admin-workflow rules are done and deployed.
 - Add tests for scoring.
 - Add tests for permission-sensitive flows.
 - Add indexes for standings and activity feed queries.
 - Decide whether score aggregation needs Cloud Functions.
 
+## Development Gate
+
+Before any deploy, run:
+
+```sh
+npm run ci --prefix offseason_challenge
+```
+
+New development must include lightweight tests appropriate to the change before deployment. The current deploy workflows and Firebase Hosting `predeploy` hook run CI automatically.
+
 ## Initial Technical Choices
 
-- React with TypeScript for the frontend.
+- Next.js with React and TypeScript for the frontend.
 - Firebase Authentication for accounts.
 - Cloud Firestore for app data.
 - Firebase Storage for uploaded proof.
