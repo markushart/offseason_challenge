@@ -1,17 +1,13 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "offseason_challenge/out",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
+    "cleanUrls": true,
+    "trailingSlash": false
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"

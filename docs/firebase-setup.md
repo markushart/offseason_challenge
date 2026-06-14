@@ -10,7 +10,7 @@ Use these Firebase products first:
 - Cloud Firestore for competitions, teams, members, activity rules, invites, and activity logs.
 - Cloud Storage for uploaded proof files.
 - Firebase Emulator Suite for local development.
-- Firebase Hosting later, once the React app exists.
+- Firebase Hosting for the static Next.js export.
 - Cloud Functions later, if final score calculation or score aggregation must be trusted server-side.
 
 ## Project Files
@@ -18,7 +18,7 @@ Use these Firebase products first:
 The proposed Firebase config is:
 
 ```text
-.env.example
+offseason_challenge/.env.example
 .firebaserc.example
 firebase.json
 firestore.rules
@@ -28,60 +28,58 @@ storage.rules
 
 Do not commit a real `.firebaserc` until the project ID is decided. Copy `.firebaserc.example` to `.firebaserc` locally and replace `your-firebase-project-id`.
 
-Do not commit `.env.local`. Copy `.env.example` to `.env.local` and fill it with the web app config from the Firebase Console.
+Do not commit `.env.local`. Copy `offseason_challenge/.env.example` to `offseason_challenge/.env.local` and fill it with the web app config from the Firebase Console.
 
 ## Environment Variables
 
-For a Vite React app, use `VITE_` prefixed variables:
+For the current Next.js app, use `NEXT_PUBLIC_` prefixed variables:
 
 ```text
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_USE_FIREBASE_EMULATORS=false
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false
 ```
 
 Firebase web config values are not treated like server secrets. They identify the Firebase project used by the client app. Security comes from Firebase Authentication, Firestore Security Rules, Storage Security Rules, and later App Check if needed.
 
 ## Suggested Frontend Firebase Module
 
-When the React app is created, add a module like `src/lib/firebase.ts`:
+The app now includes a Firebase client module at `offseason_challenge/lib/firebase.ts`.
+It initializes Firebase Auth from the public Next environment variables and can connect
+to the Auth emulator when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`.
+
+The current Auth-focused version follows this shape:
 
 ```ts
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
 
-if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true") {
+if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true") {
   connectAuthEmulator(auth, "http://127.0.0.1:9099");
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  connectStorageEmulator(storage, "127.0.0.1", 9199);
 }
 ```
 
 ## First Console Setup
 
 1. Create a Firebase project.
-2. Register a web app and copy the web config into `.env.local`.
-3. Enable Authentication with email/password first.
+2. Register a web app and copy the web config into `offseason_challenge/.env.local`.
+3. Enable Authentication with Google first.
 4. Create the default Firestore database.
 5. Create the default Storage bucket.
 6. Copy `.firebaserc.example` to `.firebaserc` and set the real project ID.
