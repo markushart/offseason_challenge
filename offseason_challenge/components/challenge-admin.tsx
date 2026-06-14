@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
 import {
   createActivityRule,
   createChallenge,
   createInvite,
   createTeam,
-  listenAdminChallenges,
+  listenChallenge,
   listenChallengeDetail,
   setActivityRuleEnabled,
   type ActivityRule,
@@ -32,60 +32,44 @@ const emptyDetail: ChallengeDetail = {
   activityRules: [],
 };
 
-export function ChallengeAdmin() {
+export function ChallengeAdmin({ 
+  selectedChallengeId, 
+  onChallengeCreated 
+}: { 
+  selectedChallengeId: string; 
+  onChallengeCreated: (id: string) => void;
+}) {
   const user = useSignedInUser();
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [selectedChallengeId, setSelectedChallengeId] = useState("");
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [detail, setDetail] = useState<ChallengeDetail>(emptyDetail);
-  const [isLoadingChallenges, setIsLoadingChallenges] = useState(hasFirebaseConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedChallenge = useMemo(
-    () =>
-      challenges.find((challenge) => challenge.id === selectedChallengeId) ??
-      challenges[0] ??
-      null,
-    [challenges, selectedChallengeId],
-  );
-  const activeDetail = selectedChallenge ? detail : emptyDetail;
-
+  // Fetch only the selected challenge document
   useEffect(() => {
-    if (!hasFirebaseConfig) {
+    if (!selectedChallengeId || !hasFirebaseConfig) {
+      // Use a microtask to avoid synchronous setState in effect lint error
+      Promise.resolve().then(() => setSelectedChallenge(null));
       return;
     }
 
-    return listenAdminChallenges(
-      user.uid,
-      (nextChallenges) => {
-        setChallenges(nextChallenges);
-        setSelectedChallengeId((currentId) => {
-          if (currentId && nextChallenges.some((item) => item.id === currentId)) {
-            return currentId;
-          }
-
-          return nextChallenges[0]?.id ?? "";
-        });
-        setIsLoadingChallenges(false);
-      },
-      (listenError) => {
-        setError(listenError.message);
-        setIsLoadingChallenges(false);
-      },
-    );
-  }, [user.uid]);
+    return listenChallenge(selectedChallengeId, setSelectedChallenge, (err) => setError(err.message));
+  }, [selectedChallengeId]);
 
   useEffect(() => {
-    if (!selectedChallenge) {
+    if (!selectedChallengeId) {
       return;
     }
 
     return listenChallengeDetail(
-      selectedChallenge.id,
+      selectedChallengeId,
       setDetail,
       (listenError) => setError(listenError.message),
     );
-  }, [selectedChallenge]);
+  }, [selectedChallengeId]);
+
+  const activeDetail = selectedChallengeId ? detail : emptyDetail;
+  const isAdmin = selectedChallenge?.adminIds.includes(user.uid);
 
   const handleCreateChallenge = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,7 +88,7 @@ export function ChallengeAdmin() {
 
     try {
       const challengeId = await createChallenge(user, { name, description });
-      setSelectedChallengeId(challengeId);
+      onChallengeCreated(challengeId);
       form.reset();
     } catch (createError) {
       setError(getMessage(createError));
@@ -237,25 +221,28 @@ export function ChallengeAdmin() {
         <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 sm:pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 sm:text-sm">
-              Challenge Admin
+              {selectedChallenge ? "Challenge Dashboard" : "Getting Started"}
             </p>
             <h1 className="mt-2 text-2xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
-              Manage your challenge
+              {selectedChallenge ? selectedChallenge.name : "Create a new challenge"}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-              Create teams, invite participants, and set activity rewards from
-              your phone.
+              {selectedChallenge 
+                ? selectedChallenge.description || "Manage teams, invites, and activities."
+                : "Welcome! Create a new team competition to get started."}
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[420px]">
-            <Metric label="Challenges" value={String(challenges.length)} />
-            <Metric label="Teams" value={String(activeDetail.teams.length)} />
-            <Metric
-              label="Activities"
-              value={String(activeDetail.activityRules.length)}
-            />
-          </div>
+          {selectedChallenge && (
+            <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[420px]">
+              <Metric label="Status" value={selectedChallenge.status} />
+              <Metric label="Teams" value={String(activeDetail.teams.length)} />
+              <Metric
+                label="Activities"
+                value={String(activeDetail.activityRules.length)}
+              />
+            </div>
+          )}
         </header>
 
         {!hasFirebaseConfig ? (
@@ -267,94 +254,40 @@ export function ChallengeAdmin() {
 
         {error ? <Notice tone="error">{error}</Notice> : null}
 
-        <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <h2 className="text-xl font-semibold">New challenge</h2>
-            <form className="mt-4 grid gap-4" onSubmit={handleCreateChallenge}>
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                Name
-                <input
-                  className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
-                  maxLength={80}
-                  name="challengeName"
-                  placeholder="Handball Offseason 2026"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                Description
-                <textarea
-                  className="min-h-24 rounded-md border border-zinc-300 px-3 py-2 text-base text-zinc-950 sm:text-sm"
-                  maxLength={240}
-                  name="challengeDescription"
-                  placeholder="Preseason points competition for the senior team"
-                />
-              </label>
-              <button
-                className="h-12 rounded-md bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSaving || !hasFirebaseConfig}
-                type="submit"
-              >
-                Create challenge
-              </button>
-            </form>
-          </div>
-
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Your challenges</h2>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Select a challenge to manage its teams, invites, and activities.
-                </p>
-              </div>
-              <span className="w-fit rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800">
-                Admin
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              {isLoadingChallenges ? (
-                <p className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
-                  Loading challenges...
-                </p>
-              ) : null}
-
-              {!isLoadingChallenges && challenges.length === 0 ? (
-                <p className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
-                  No challenges yet. Create your first one to unlock team,
-                  invite, and activity controls.
-                </p>
-              ) : null}
-
-              {challenges.map((challenge) => (
+        {!selectedChallengeId ? (
+          <section className="max-w-xl mx-auto w-full">
+            <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+              <h2 className="text-xl font-semibold">New challenge</h2>
+              <form className="mt-4 grid gap-4" onSubmit={handleCreateChallenge}>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  Name
+                  <input
+                    className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
+                    maxLength={80}
+                    name="challengeName"
+                    placeholder="Handball Offseason 2026"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  Description
+                  <input
+                    className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
+                    maxLength={240}
+                    name="challengeDescription"
+                    placeholder="Preseason points competition for the senior team"
+                  />
+                </label>
                 <button
-                  className={`rounded-md border p-4 text-left transition ${
-                    selectedChallenge?.id === challenge.id
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-zinc-200 hover:bg-zinc-50"
-                  }`}
-                  key={challenge.id}
-                  onClick={() => setSelectedChallengeId(challenge.id)}
-                  type="button"
+                  className="h-12 rounded-md bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSaving || !hasFirebaseConfig}
+                  type="submit"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{challenge.name}</h3>
-                      <p className="mt-1 text-sm text-zinc-600">
-                        {challenge.description || "No description yet"}
-                      </p>
-                    </div>
-                    <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-600">
-                      {challenge.status}
-                    </span>
-                  </div>
+                  Create challenge
                 </button>
-              ))}
+              </form>
             </div>
-          </div>
-        </section>
-
-        {selectedChallenge ? (
+          </section>
+        ) : isAdmin ? (
           <section className="grid gap-4 lg:grid-cols-3">
             <TeamPanel
               isSaving={isSaving}
@@ -373,6 +306,11 @@ export function ChallengeAdmin() {
               onCreateActivity={handleCreateActivity}
               onToggleActivity={handleToggleActivity}
             />
+          </section>
+        ) : selectedChallenge ? (
+          <section className="p-12 text-center border-2 border-dashed border-zinc-200 rounded-xl">
+            <h2 className="text-xl font-semibold">Welcome to {selectedChallenge.name}</h2>
+            <p className="mt-2 text-zinc-600">Participant view coming soon. You are currently a member of this team.</p>
           </section>
         ) : null}
       </section>

@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   createChallenge: vi.fn(),
   createInvite: vi.fn(),
   createTeam: vi.fn(),
-  listenAdminChallenges: vi.fn(),
+  listenChallenge: vi.fn(),
   listenChallengeDetail: vi.fn(),
   setActivityRuleEnabled: vi.fn(),
 }));
@@ -23,6 +23,7 @@ vi.mock("@/components/auth-shell", () => ({
 
 vi.mock("@/lib/firebase", () => ({
   hasFirebaseConfig: true,
+  db: {}, // Mock db for firestore calls
 }));
 
 vi.mock("@/lib/challenges", () => ({
@@ -30,7 +31,7 @@ vi.mock("@/lib/challenges", () => ({
   createChallenge: mocks.createChallenge,
   createInvite: mocks.createInvite,
   createTeam: mocks.createTeam,
-  listenAdminChallenges: mocks.listenAdminChallenges,
+  listenChallenge: mocks.listenChallenge,
   listenChallengeDetail: mocks.listenChallengeDetail,
   setActivityRuleEnabled: mocks.setActivityRuleEnabled,
 }));
@@ -45,17 +46,15 @@ describe("ChallengeAdmin", () => {
     mocks.createTeam.mockResolvedValue(undefined);
     mocks.setActivityRuleEnabled.mockResolvedValue(undefined);
 
-    mocks.listenAdminChallenges.mockImplementation((_userId, onData) => {
-      onData([
-        {
-          id: "challenge-1",
-          name: "Summer Challenge",
-          description: "Preseason setup",
-          status: "draft",
-          adminIds: ["user-1"],
-          createdBy: "user-1",
-        },
-      ]);
+    mocks.listenChallenge.mockImplementation((_id, onData) => {
+      onData({
+        id: "challenge-1",
+        name: "Summer Challenge",
+        description: "Preseason setup",
+        status: "draft",
+        adminIds: ["user-1"],
+        createdBy: "user-1",
+      });
 
       return vi.fn();
     });
@@ -73,9 +72,15 @@ describe("ChallengeAdmin", () => {
 
   it("creates a team and resets the form without losing the submit target", async () => {
     const user = userEvent.setup();
-    render(<ChallengeAdmin />);
+    render(
+      <ChallengeAdmin 
+        selectedChallengeId="challenge-1" 
+        onChallengeCreated={() => {}} 
+      />
+    );
 
-    await screen.findByRole("button", { name: /summer challenge/i });
+    // Wait for the challenge title to appear
+    await screen.findByText("Summer Challenge");
 
     const teamNameInput = screen.getByLabelText(/team name/i);
     await user.type(teamNameInput, "Team Red");

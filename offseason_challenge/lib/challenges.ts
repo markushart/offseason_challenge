@@ -2,7 +2,10 @@ import type { User } from "firebase/auth";
 import {
   addDoc,
   collection,
+  collectionGroup,
   doc,
+  documentId,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -126,6 +129,71 @@ export function listenAdminChallenges(
         a.name.localeCompare(b.name),
       );
       onData(challenges);
+    },
+    onError,
+  );
+}
+
+export function listenChallenge(
+  challengeId: string,
+  onData: (challenge: Challenge) => void,
+  onError: (error: FirestoreError) => void,
+): Unsubscribe {
+  const firestore = assertDb();
+  return onSnapshot(
+    doc(firestore, "competitions", challengeId),
+    (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        onData({
+          id: snapshot.id,
+          name: String(data.name ?? ""),
+          description: String(data.description ?? ""),
+          status: data.status ?? "draft",
+          adminIds: Array.isArray(data.adminIds) ? data.adminIds : [],
+          createdBy: String(data.createdBy ?? ""),
+        });
+      }
+    },
+    onError,
+  );
+}
+
+export function listenMemberChallenges(
+  userId: string,
+  onData: (challenges: Challenge[]) => void,
+  onError: (error: FirestoreError) => void,
+): Unsubscribe {
+  const firestore = assertDb();
+  const membershipsQuery = query(
+    collectionGroup(firestore, "members"),
+    where("userId", "==", userId),
+    where("status", "==", "active"),
+  );
+
+  return onSnapshot(
+    membershipsQuery,
+    (snapshot) => {
+      const competitionIds = snapshot.docs.map((mDoc) => mDoc.ref.parent.parent!.id);
+
+      if (competitionIds.length === 0) {
+        onData([]);
+        return;
+      }
+
+      const competitionsQuery = query(
+        collection(firestore, "competitions"),
+        where(documentId(), "in", competitionIds.slice(0, 30)),
+      );
+
+      getDocs(competitionsQuery)
+        .then((compSnapshot) => {
+          const challenges = fromChallengeSnapshot(compSnapshot).sort((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+          onData(challenges);
+        })
+        .catch(onError);
     },
     onError,
   );
