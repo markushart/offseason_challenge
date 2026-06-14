@@ -27,6 +27,14 @@ const requiredConfig = [
 
 export const hasFirebaseConfig = requiredConfig.every(Boolean);
 
+console.log("Firebase Config Status:", {
+  hasConfig: hasFirebaseConfig,
+  apiKeyPresent: !!firebaseConfig.apiKey,
+  authDomainPresent: !!firebaseConfig.authDomain,
+  projectIdPresent: !!firebaseConfig.projectId,
+  envKeys: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_FIREBASE'))
+});
+
 export const app: FirebaseApp | null = hasFirebaseConfig
   ? getApps().length > 0
     ? getApp()
