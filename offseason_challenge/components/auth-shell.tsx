@@ -114,10 +114,15 @@ export function AuthShell({ children }: AuthShellProps) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const displayName = String(formData.get("displayName") ?? "").trim();
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (!email || !password) {
       setError("Add an email and password.");
+      return;
+    }
+
+    if (authMode === "create" && password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -127,10 +132,7 @@ export function AuthShell({ children }: AuthShellProps) {
     try {
       if (authMode === "create") {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
-
-        if (displayName) {
-          await updateProfile(credential.user, { displayName });
-        }
+        await updateProfile(credential.user, { displayName: email.split("@")[0] });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -179,7 +181,7 @@ export function AuthShell({ children }: AuthShellProps) {
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
             <h2 className="text-xl font-semibold">Enter the challenge</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Sign in with Google or use an email/password test account. Team
+              Sign in with Google or use your email and password. Team
               membership and activity logs connect to your Firebase user ID.
             </p>
 
@@ -215,17 +217,6 @@ export function AuthShell({ children }: AuthShellProps) {
             </div>
 
             <form className="mt-5 grid gap-3" onSubmit={handleEmailAuth}>
-              {authMode === "create" ? (
-                <label className="grid gap-1">
-                  <span className="text-sm font-semibold text-zinc-700">Name</span>
-                  <input
-                    className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
-                    maxLength={80}
-                    name="displayName"
-                    placeholder="Test Participant"
-                  />
-                </label>
-              ) : null}
               <label className="grid gap-1">
                 <span className="text-sm font-semibold text-zinc-700">Email</span>
                 <input
@@ -248,6 +239,19 @@ export function AuthShell({ children }: AuthShellProps) {
                   type="password"
                 />
               </label>
+              {authMode === "create" ? (
+                <label className="grid gap-1">
+                  <span className="text-sm font-semibold text-zinc-700">Confirm password</span>
+                  <input
+                    autoComplete="new-password"
+                    className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
+                    minLength={6}
+                    name="confirmPassword"
+                    required
+                    type="password"
+                  />
+                </label>
+              ) : null}
               <button
                 className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!hasFirebaseConfig || isSigningIn}
@@ -256,7 +260,7 @@ export function AuthShell({ children }: AuthShellProps) {
                 {isSigningIn
                   ? "Working..."
                   : authMode === "create"
-                    ? "Create test account"
+                    ? "Create account"
                     : "Sign in with email"}
               </button>
             </form>
