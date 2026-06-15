@@ -5,7 +5,7 @@
 - App framework: Next.js with React and TypeScript in `offseason_challenge/`.
 - Rendering/deploy target: static Next export generated into `offseason_challenge/out`.
 - Hosting: Firebase Hosting serves `offseason_challenge/out`.
-- Auth: Firebase Authentication with Google sign-in.
+- Auth: Firebase Authentication with Google and email/password sign-in.
 - Data: Cloud Firestore Standard / native mode, `(default)` database, location `nam5`.
 - Current signed-in product surface: mobile-first challenge admin workflow.
 - Current admin capabilities:

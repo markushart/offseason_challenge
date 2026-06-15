@@ -26,7 +26,7 @@
 - Created the initial Next.js app folder.
 - Replaced the starter page with a first demo for the Offseason Challenge concept.
 - Pointed Firebase Hosting and GitHub Hosting workflows at the nested Next app build output.
-- Added Firebase Web SDK and a Google sign-up/sign-in shell.
+- Added Firebase Web SDK and a Google plus email/password sign-up/sign-in shell.
 - Added `offseason_challenge/.env.example` for Firebase web app configuration.
 - Added Firestore client support for challenge management data.
 - Added prototype Firestore rules and indexes configuration.

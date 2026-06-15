@@ -1,14 +1,18 @@
 "use client";
 
 import {
+  createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updateProfile,
   type User,
 } from "firebase/auth";
 import {
   createContext,
+  type FormEvent,
   type ReactNode,
   useContext,
   useEffect,
@@ -23,10 +27,26 @@ type AuthShellProps = {
 
 const getAuthMessage = (error: unknown) => {
   if (error instanceof Error) {
+    if (error.message.includes("auth/email-already-in-use")) {
+      return "An account already exists for this email. Sign in instead.";
+    }
+
+    if (error.message.includes("auth/invalid-credential")) {
+      return "Email or password is incorrect.";
+    }
+
+    if (error.message.includes("auth/weak-password")) {
+      return "Use a password with at least 6 characters.";
+    }
+
+    if (error.message.includes("auth/operation-not-allowed")) {
+      return "Email/password sign-in is not enabled for this Firebase project.";
+    }
+
     return error.message;
   }
 
-  return "Google sign-up failed. Please try again.";
+  return "Sign-in failed. Please try again.";
 };
 
 const SignedInUserContext = createContext<User | null>(null);
@@ -45,6 +65,7 @@ export function AuthShell({ children }: AuthShellProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(auth));
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [authMode, setAuthMode] = useState<"signIn" | "create">("signIn");
   const [error, setError] = useState<string | null>(null);
 
   const googleProvider = useMemo(() => {
@@ -82,6 +103,44 @@ export function AuthShell({ children }: AuthShellProps) {
     }
   };
 
+  const handleEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!auth) {
+      setError("Firebase is not configured yet. Add your values to .env.local.");
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const displayName = String(formData.get("displayName") ?? "").trim();
+
+    if (!email || !password) {
+      setError("Add an email and password.");
+      return;
+    }
+
+    setError(null);
+    setIsSigningIn(true);
+
+    try {
+      if (authMode === "create") {
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+
+        if (displayName) {
+          await updateProfile(credential.user, { displayName });
+        }
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (signInError) {
+      setError(getAuthMessage(signInError));
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
   const handleSignOut = async () => {
     if (!auth) {
       return;
@@ -112,20 +171,98 @@ export function AuthShell({ children }: AuthShellProps) {
               Sign up for your team challenge.
             </h1>
             <p className="mt-3 max-w-xl text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
-              Create your account with Google, then manage trainings, activities,
+              Create your account, then manage trainings, activities,
               proof uploads, and team standings from your phone.
             </p>
           </div>
 
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-xl font-semibold">Create your account</h2>
+            <h2 className="text-xl font-semibold">Enter the challenge</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Google sign-up creates a Firebase Auth user for this app. Team
-              membership and activity logs will be connected to that user ID.
+              Sign in with Google or use an email/password test account. Team
+              membership and activity logs connect to your Firebase user ID.
             </p>
 
+            <div className="mt-5 grid grid-cols-2 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+              <button
+                className={`h-10 rounded-md text-sm font-semibold transition ${
+                  authMode === "signIn"
+                    ? "bg-white text-zinc-950 shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-950"
+                }`}
+                onClick={() => {
+                  setAuthMode("signIn");
+                  setError(null);
+                }}
+                type="button"
+              >
+                Sign in
+              </button>
+              <button
+                className={`h-10 rounded-md text-sm font-semibold transition ${
+                  authMode === "create"
+                    ? "bg-white text-zinc-950 shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-950"
+                }`}
+                onClick={() => {
+                  setAuthMode("create");
+                  setError(null);
+                }}
+                type="button"
+              >
+                Create account
+              </button>
+            </div>
+
+            <form className="mt-5 grid gap-3" onSubmit={handleEmailAuth}>
+              {authMode === "create" ? (
+                <label className="grid gap-1">
+                  <span className="text-sm font-semibold text-zinc-700">Name</span>
+                  <input
+                    className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
+                    maxLength={80}
+                    name="displayName"
+                    placeholder="Test Participant"
+                  />
+                </label>
+              ) : null}
+              <label className="grid gap-1">
+                <span className="text-sm font-semibold text-zinc-700">Email</span>
+                <input
+                  autoComplete="email"
+                  className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
+                  name="email"
+                  placeholder="test-participant@example.com"
+                  required
+                  type="email"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-sm font-semibold text-zinc-700">Password</span>
+                <input
+                  autoComplete={authMode === "create" ? "new-password" : "current-password"}
+                  className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
+                  minLength={6}
+                  name="password"
+                  required
+                  type="password"
+                />
+              </label>
+              <button
+                className="flex h-12 w-full items-center justify-center rounded-md bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!hasFirebaseConfig || isSigningIn}
+                type="submit"
+              >
+                {isSigningIn
+                  ? "Working..."
+                  : authMode === "create"
+                    ? "Create test account"
+                    : "Sign in with email"}
+              </button>
+            </form>
+
             <button
-              className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-md border border-zinc-300 bg-white px-4 font-semibold text-zinc-950 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-md border border-zinc-300 bg-white px-4 font-semibold text-zinc-950 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!hasFirebaseConfig || isSigningIn}
               onClick={handleGoogleSignUp}
               type="button"
@@ -133,7 +270,7 @@ export function AuthShell({ children }: AuthShellProps) {
               <span className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-base font-semibold">
                 G
               </span>
-              {isSigningIn ? "Opening Google..." : "Sign up with Google"}
+              {isSigningIn ? "Opening Google..." : "Continue with Google"}
             </button>
 
             {!hasFirebaseConfig ? (
