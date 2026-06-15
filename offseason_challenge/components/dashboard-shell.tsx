@@ -57,22 +57,23 @@ export function DashboardShell({ children }: DashboardShellProps) {
   };
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 border-r border-zinc-200 bg-white lg:static lg:block hidden">
+    <div className="flex min-h-screen">
+      {/* Sidebar - Matching Laufchallenge aesthetics */}
+      <aside className="fixed inset-y-0 left-0 w-64 border-r border-line bg-surface lg:static lg:block hidden shadow-sm">
         <div className="flex h-full flex-col">
-          <div className="p-6 border-b border-zinc-200">
-            <h2 className="text-lg font-bold text-emerald-800">Offseason</h2>
+          <div className="p-6 border-b border-line bg-surface">
+            <p className="eyebrow">Offseason</p>
+            <h2 className="text-xl font-bold text-brand">Challenge</h2>
           </div>
 
           <nav className="flex-1 overflow-y-auto p-4 space-y-4">
             <div>
               <button
                 onClick={() => handleSelectChallenge("")}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition ${
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-extrabold transition ${
                   selectedChallengeId === ""
-                    ? "bg-emerald-50 text-emerald-800"
-                    : "text-zinc-600 hover:bg-zinc-50"
+                    ? "bg-brand text-white"
+                    : "text-muted hover:bg-surface-soft"
                 }`}
               >
                 + New Challenge
@@ -80,22 +81,22 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </div>
 
             <div className="space-y-1">
-              <p className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <p className="px-3 text-[11px] font-extrabold uppercase tracking-widest text-muted opacity-60">
                 Your Challenges
               </p>
               {isLoading ? (
-                <p className="px-3 py-2 text-sm text-zinc-400">Loading...</p>
+                <p className="px-3 py-2 text-sm text-muted">Loading...</p>
               ) : challenges.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-zinc-400 italic">No challenges yet</p>
+                <p className="px-3 py-2 text-sm text-muted italic opacity-60">No challenges yet</p>
               ) : (
                 challenges.map((challenge) => (
                   <button
                     key={challenge.id}
                     onClick={() => handleSelectChallenge(challenge.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium truncate transition ${
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-extrabold truncate transition ${
                       selectedChallengeId === challenge.id
-                        ? "bg-emerald-50 text-emerald-800"
-                        : "text-zinc-600 hover:bg-zinc-50"
+                        ? "bg-brand text-white shadow-md"
+                        : "text-muted hover:bg-surface-soft"
                     }`}
                   >
                     {challenge.name}
@@ -104,18 +105,33 @@ export function DashboardShell({ children }: DashboardShellProps) {
               )}
             </div>
           </nav>
+          
+          <div className="p-4 border-t border-line">
+             <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand text-white font-extrabold text-lg">
+                  {(user.displayName ?? user.email ?? "U").slice(0, 1)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-extrabold uppercase text-muted leading-none mb-1">Signed in</p>
+                  <p className="font-extrabold text-sm truncate text-brand-strong">{user.displayName ?? user.email}</p>
+                </div>
+             </div>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header (Simplified) */}
-        <header className="lg:hidden flex items-center justify-between p-4 border-b border-zinc-200 bg-white">
-          <h2 className="text-lg font-bold text-emerald-800">Offseason</h2>
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center justify-between p-4 border-b border-line bg-surface shadow-sm">
+           <div>
+            <p className="eyebrow leading-none mb-1">Offseason</p>
+            <h2 className="text-lg font-bold text-brand">Challenge</h2>
+          </div>
           <select 
             value={selectedChallengeId} 
             onChange={(e) => handleSelectChallenge(e.target.value)}
-            className="text-sm border-zinc-200 rounded-md"
+            className="text-sm font-extrabold border-line rounded-lg w-auto min-h-[38px] bg-surface-soft"
           >
             <option value="">+ New Challenge</option>
             {challenges.map(c => (
@@ -124,7 +140,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </select>
         </header>
 
-        <main className="flex-1">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {children({ selectedChallengeId, setSelectedChallengeId })}
         </main>
       </div>

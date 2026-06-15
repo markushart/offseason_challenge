@@ -216,105 +216,100 @@ export function ChallengeAdmin({
   };
 
   return (
-    <main className="min-h-screen bg-stone-50 text-zinc-950">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-3 sm:gap-6 sm:px-6 sm:py-5 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 sm:pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 sm:text-sm">
-              {selectedChallenge ? "Challenge Dashboard" : "Getting Started"}
-            </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
-              {selectedChallenge ? selectedChallenge.name : "Create a new challenge"}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-              {selectedChallenge 
-                ? selectedChallenge.description || "Manage teams, invites, and activities."
-                : "Welcome! Create a new team competition to get started."}
-            </p>
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="eyebrow leading-none mb-1">
+            {selectedChallenge ? "Challenge Dashboard" : "Getting Started"}
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-brand-strong sm:text-4xl">
+            {selectedChallenge ? selectedChallenge.name : "Create a new challenge"}
+          </h1>
+          <p className="mt-2 max-w-2xl text-base text-muted font-medium">
+            {selectedChallenge 
+              ? selectedChallenge.description || "Manage teams, invites, and activities."
+              : "Welcome! Create a new team competition to get started."}
+          </p>
+        </div>
+
+        {selectedChallenge && (
+          <div className="flex gap-3 overflow-x-auto pb-2 sm:pb-0">
+            <Metric label="Status" value={selectedChallenge.status} />
+            <Metric label="Teams" value={String(activeDetail.teams.length)} />
+            <Metric label="Activities" value={String(activeDetail.activityRules.length)} />
           </div>
+        )}
+      </header>
 
-          {selectedChallenge && (
-            <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[420px]">
-              <Metric label="Status" value={selectedChallenge.status} />
-              <Metric label="Teams" value={String(activeDetail.teams.length)} />
-              <Metric
-                label="Activities"
-                value={String(activeDetail.activityRules.length)}
-              />
-            </div>
-          )}
-        </header>
+      {!hasFirebaseConfig ? (
+        <Notice tone="warning">
+          Firebase config is missing. Add your Firebase web app values to
+          `offseason_challenge/.env.local` before using challenge management.
+        </Notice>
+      ) : null}
 
-        {!hasFirebaseConfig ? (
-          <Notice tone="warning">
-            Firebase config is missing. Add your Firebase web app values to
-            `offseason_challenge/.env.local` before using challenge management.
-          </Notice>
-        ) : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
 
-        {error ? <Notice tone="error">{error}</Notice> : null}
-
-        {!selectedChallengeId ? (
-          <section className="max-w-xl mx-auto w-full">
-            <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold">New challenge</h2>
-              <form className="mt-4 grid gap-4" onSubmit={handleCreateChallenge}>
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                  Name
-                  <input
-                    className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
-                    maxLength={80}
-                    name="challengeName"
-                    placeholder="Handball Offseason 2026"
-                  />
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                  Description
-                  <input
-                    className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
-                    maxLength={240}
-                    name="challengeDescription"
-                    placeholder="Preseason points competition for the senior team"
-                  />
-                </label>
-                <button
-                  className="h-12 rounded-md bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSaving || !hasFirebaseConfig}
-                  type="submit"
-                >
-                  Create challenge
-                </button>
-              </form>
-            </div>
-          </section>
-        ) : isAdmin ? (
-          <section className="grid gap-4 lg:grid-cols-3">
-            <TeamPanel
-              isSaving={isSaving}
-              onCreateTeam={handleCreateTeam}
-              teams={activeDetail.teams}
-            />
-            <InvitePanel
-              invites={activeDetail.invites}
-              isSaving={isSaving}
-              onCreateInvite={handleCreateInvite}
-              teams={activeDetail.teams}
-            />
-            <ActivityPanel
-              activityRules={activeDetail.activityRules}
-              isSaving={isSaving}
-              onCreateActivity={handleCreateActivity}
-              onToggleActivity={handleToggleActivity}
-            />
-          </section>
-        ) : selectedChallenge ? (
-          <section className="p-12 text-center border-2 border-dashed border-zinc-200 rounded-xl">
-            <h2 className="text-xl font-semibold">Welcome to {selectedChallenge.name}</h2>
-            <p className="mt-2 text-zinc-600">Participant view coming soon. You are currently a member of this team.</p>
-          </section>
-        ) : null}
-      </section>
-    </main>
+      {!selectedChallengeId ? (
+        <div className="max-w-xl mx-auto w-full py-8">
+          <div className="panel flex flex-col gap-6">
+            <h2 className="text-xl font-bold text-brand-strong">New challenge</h2>
+            <form className="grid gap-4" onSubmit={handleCreateChallenge}>
+              <label>
+                <span>Challenge Name</span>
+                <input
+                  maxLength={80}
+                  name="challengeName"
+                  placeholder="Handball Offseason 2026"
+                />
+              </label>
+              <label>
+                <span>Description</span>
+                <input
+                  maxLength={240}
+                  name="challengeDescription"
+                  placeholder="Preseason points competition for the senior team"
+                />
+              </label>
+              <button
+                className="button-primary mt-2"
+                disabled={isSaving || !hasFirebaseConfig}
+                type="submit"
+              >
+                {isSaving ? "Creating..." : "Create challenge"}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : isAdmin ? (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <TeamPanel
+            isSaving={isSaving}
+            onCreateTeam={handleCreateTeam}
+            teams={activeDetail.teams}
+          />
+          <InvitePanel
+            invites={activeDetail.invites}
+            isSaving={isSaving}
+            onCreateInvite={handleCreateInvite}
+            teams={activeDetail.teams}
+          />
+          <ActivityPanel
+            activityRules={activeDetail.activityRules}
+            isSaving={isSaving}
+            onCreateActivity={handleCreateActivity}
+            onToggleActivity={handleToggleActivity}
+          />
+        </div>
+      ) : selectedChallenge ? (
+        <div className="p-16 text-center border-2 border-dashed border-line rounded-2xl bg-surface-soft/50">
+          <h2 className="text-2xl font-bold text-brand-strong">Welcome to {selectedChallenge.name}</h2>
+          <p className="mt-3 text-muted font-medium max-w-md mx-auto">
+            Participant view coming soon. You are currently a member of this team.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -328,24 +323,20 @@ function TeamPanel({
   onCreateTeam: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <h2 className="text-xl font-semibold">Teams</h2>
-      <form className="mt-4 grid gap-4" onSubmit={onCreateTeam}>
-        <label className="grid gap-2 text-sm font-medium text-zinc-700">
-          Team name
+    <section className="panel flex flex-col gap-4">
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Teams</h2>
+      <form className="grid gap-4" onSubmit={onCreateTeam}>
+        <label>
+          <span>Team name</span>
           <input
-            className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
             maxLength={50}
             name="teamName"
             placeholder="Team Blue"
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-zinc-700">
-          Color
-          <select
-            className="h-12 rounded-md border border-zinc-300 bg-white px-3 text-base text-zinc-950 sm:text-sm"
-            name="teamColor"
-          >
+        <label>
+          <span>Color</span>
+          <select name="teamColor">
             {teamColors.map((color) => (
               <option key={color} value={color}>
                 {color}
@@ -354,7 +345,7 @@ function TeamPanel({
           </select>
         </label>
         <button
-          className="h-12 rounded-md bg-zinc-950 px-4 font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="button-primary"
           disabled={isSaving}
           type="submit"
         >
@@ -362,23 +353,23 @@ function TeamPanel({
         </button>
       </form>
 
-      <div className="mt-4 grid gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         {teams.length === 0 ? (
-          <p className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-600">
+          <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
             No teams yet.
           </p>
         ) : null}
         {teams.map((team) => (
           <div
-            className="flex items-center justify-between rounded-md border border-zinc-200 p-3"
+            className="flex items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4"
             key={team.id}
           >
             <div className="flex items-center gap-3">
               <span
-                className="h-4 w-4 rounded-full"
+                className="h-4 w-4 rounded-full shadow-sm"
                 style={{ backgroundColor: team.color }}
               />
-              <span className="font-medium">{team.name}</span>
+              <span className="font-bold text-brand-strong">{team.name}</span>
             </div>
           </div>
         ))}
@@ -399,15 +390,12 @@ function InvitePanel({
   onCreateInvite: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <h2 className="text-xl font-semibold">Invites</h2>
-      <form className="mt-4 grid gap-4" onSubmit={onCreateInvite}>
-        <label className="grid gap-2 text-sm font-medium text-zinc-700">
-          Assign invite to team
-          <select
-            className="h-12 rounded-md border border-zinc-300 bg-white px-3 text-base text-zinc-950 sm:text-sm"
-            name="inviteTeamId"
-          >
+    <section className="panel flex flex-col gap-4">
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Invites</h2>
+      <form className="grid gap-4" onSubmit={onCreateInvite}>
+        <label>
+          <span>Assign to team</span>
+          <select name="inviteTeamId">
             <option value="">Unassigned</option>
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
@@ -416,10 +404,9 @@ function InvitePanel({
             ))}
           </select>
         </label>
-        <label className="grid gap-2 text-sm font-medium text-zinc-700">
-          Max uses
+        <label>
+          <span>Max uses</span>
           <input
-            className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
             min={1}
             name="maxUses"
             placeholder="No limit"
@@ -427,7 +414,7 @@ function InvitePanel({
           />
         </label>
         <button
-          className="h-12 rounded-md bg-zinc-950 px-4 font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="button-primary"
           disabled={isSaving}
           type="submit"
         >
@@ -435,26 +422,26 @@ function InvitePanel({
         </button>
       </form>
 
-      <div className="mt-4 grid gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         {invites.length === 0 ? (
-          <p className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-600">
+          <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
             No invite codes yet.
           </p>
         ) : null}
         {invites.map((invite) => (
           <div
-            className="rounded-md border border-zinc-200 p-3"
+            className="rounded-lg border border-line bg-surface-soft/30 p-4"
             key={invite.id}
           >
             <div className="flex items-center justify-between gap-3">
-              <code className="rounded bg-zinc-100 px-2 py-1 font-mono text-base font-semibold sm:text-sm">
+              <code className="rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
                 {invite.code}
               </code>
-              <span className="text-sm text-zinc-500">
-                {invite.usedCount}/{invite.maxUses ?? "∞"}
+              <span className="text-xs font-black text-muted uppercase tracking-tighter">
+                {invite.usedCount}/{invite.maxUses ?? "∞"} Uses
               </span>
             </div>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-3 text-xs font-extrabold text-muted uppercase tracking-wide">
               {getTeamName(teams, invite.teamId)}
             </p>
           </div>
@@ -476,32 +463,29 @@ function ActivityPanel({
   onToggleActivity: (activityRule: ActivityRule) => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <h2 className="text-xl font-semibold">Activities</h2>
-      <form className="mt-4 grid gap-4" onSubmit={onCreateActivity}>
-        <label className="grid gap-2 text-sm font-medium text-zinc-700">
-          Activity name
+    <section className="panel flex flex-col gap-4">
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Activities</h2>
+      <form className="grid gap-4" onSubmit={onCreateActivity}>
+        <label>
+          <span>Activity name</span>
           <input
-            className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
             maxLength={80}
             name="activityName"
             placeholder="Running / Jogging"
           />
         </label>
-        <div className="grid gap-3 sm:grid-cols-[1fr_110px]">
-          <label className="grid gap-2 text-sm font-medium text-zinc-700">
-            Category
+        <div className="grid gap-4 sm:grid-cols-[1fr_90px]">
+          <label>
+            <span>Category</span>
             <input
-              className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
               maxLength={40}
               name="activityCategory"
               placeholder="running"
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium text-zinc-700">
-            Points
+          <label>
+            <span>Points</span>
             <input
-              className="h-12 rounded-md border border-zinc-300 px-3 text-base text-zinc-950 sm:text-sm"
               max={50}
               min={1}
               name="activityPoints"
@@ -509,12 +493,12 @@ function ActivityPanel({
             />
           </label>
         </div>
-        <label className="flex min-h-12 items-center gap-3 rounded-md border border-zinc-200 px-3 text-sm font-medium text-zinc-700">
-          <input className="h-5 w-5" name="requiresProof" type="checkbox" />
-          Requires proof
+        <label className="flex min-h-[46px] items-center gap-3 rounded-lg border border-line px-3 bg-white">
+          <input className="h-5 w-5 accent-brand" name="requiresProof" type="checkbox" />
+          <span className="text-sm font-bold text-muted">Requires proof</span>
         </label>
         <button
-          className="h-12 rounded-md bg-zinc-950 px-4 font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="button-primary"
           disabled={isSaving}
           type="submit"
         >
@@ -522,38 +506,38 @@ function ActivityPanel({
         </button>
       </form>
 
-      <div className="mt-4 grid gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         {activityRules.length === 0 ? (
-          <p className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-600">
+          <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
             No activities yet.
           </p>
         ) : null}
         {activityRules.map((activityRule) => (
           <div
-            className="rounded-md border border-zinc-200 p-3"
+            className="rounded-lg border border-line bg-surface-soft/30 p-4"
             key={activityRule.id}
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold">{activityRule.name}</p>
-                <p className="mt-1 text-sm text-zinc-500">
+              <div className="min-w-0">
+                <p className="font-bold text-brand-strong truncate">{activityRule.name}</p>
+                <p className="mt-1 text-xs font-extrabold text-muted uppercase tracking-wider">
                   {activityRule.category} · {activityRule.scoring.points} pts
                 </p>
               </div>
               <button
-                className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold ${
+                className={`rounded-lg px-3 py-1 text-[11px] font-black uppercase tracking-widest transition ${
                   activityRule.enabled
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-zinc-100 text-zinc-600"
+                    ? "bg-ok/10 text-ok border border-ok/20"
+                    : "bg-muted/10 text-muted border border-muted/20"
                 }`}
                 onClick={() => onToggleActivity(activityRule)}
                 type="button"
               >
-                {activityRule.enabled ? "Enabled" : "Disabled"}
+                {activityRule.enabled ? "Active" : "Paused"}
               </button>
             </div>
             {activityRule.requiresProof ? (
-              <p className="mt-2 text-sm text-zinc-500">Proof required</p>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-tighter text-accent">Proof required</p>
             ) : null}
           </div>
         ))}
@@ -564,11 +548,9 @@ function ActivityPanel({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+    <div className="stat-tile min-w-[120px]">
+      <span>{label}</span>
+      <strong className="text-brand-strong uppercase">{value}</strong>
     </div>
   );
 }
@@ -582,11 +564,11 @@ function Notice({
 }) {
   const classes =
     tone === "error"
-      ? "border-red-200 bg-red-50 text-red-800"
-      : "border-amber-200 bg-amber-50 text-amber-900";
+      ? "border-danger/20 bg-danger/10 text-danger"
+      : "border-accent/20 bg-accent/10 text-accent";
 
   return (
-    <p className={`rounded-md border p-3 text-sm ${classes}`}>{children}</p>
+    <p className={`rounded-lg border p-4 text-sm font-bold ${classes}`}>{children}</p>
   );
 }
 
