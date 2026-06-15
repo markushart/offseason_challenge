@@ -92,7 +92,7 @@ service cloud.firestore {
     }
 
     function validCompetition(data) {
-      return data.keys().hasOnly([
+      return data.keys().hasAll([
           "name",
           "description",
           "createdBy",
@@ -110,6 +110,8 @@ service cloud.firestore {
         data.adminIds.size() <= 20 &&
         data.status in ["draft", "active", "completed", "archived"] &&
         validSettings(data.settings) &&
+        (!("startsAt" in data) || data.startsAt == null || data.startsAt is timestamp) &&
+        (!("endsAt" in data) || data.endsAt == null || data.endsAt is timestamp) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
     }
@@ -119,7 +121,7 @@ service cloud.firestore {
         data.createdBy == request.auth.uid &&
         data.adminIds.size() == 1 &&
         data.adminIds[0] == request.auth.uid &&
-        data.status == "draft" &&
+        data.status == "active" &&
         data.createdAt == request.time &&
         data.updatedAt == request.time;
     }
@@ -315,6 +317,15 @@ service cloud.firestore {
           validActivityRuleUpdate(request.resource.data);
         allow delete: if false;
       }
+    }
+
+    match /{path=**}/members/{userId} {
+      allow read: if isOwner(userId);
+    }
+    
+    match /{path=**}/invites/{inviteId} {
+      // Allow searching for invites by code
+      allow read: if signedIn();
     }
 
     match /{document=**} {
