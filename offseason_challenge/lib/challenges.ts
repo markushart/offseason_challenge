@@ -5,10 +5,12 @@ import {
   collectionGroup,
   doc,
   documentId,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
   serverTimestamp,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -23,9 +25,11 @@ export type Challenge = {
   id: string;
   name: string;
   description: string;
-  status: "draft" | "active" | "completed" | "archived";
+  status: "active" | "completed" | "archived";
   adminIds: string[];
   createdBy: string;
+  startsAt: Date | null;
+  endsAt: Date | null;
 };
 
 export type Team = {
@@ -41,6 +45,16 @@ export type Invite = {
   usedCount: number;
   maxUses: number | null;
   disabledAt: unknown | null;
+};
+
+export type Member = {
+  userId: string;
+  displayNameSnapshot: string;
+  emailSnapshot: string | null;
+  teamId: string | null;
+  role: "admin" | "participant";
+  status: "active" | "invited" | "removed";
+  joinedAt: Date | null;
 };
 
 export type ActivityRule = {
@@ -59,11 +73,18 @@ export type ChallengeDetail = {
   teams: Team[];
   invites: Invite[];
   activityRules: ActivityRule[];
+  members: Member[];
 };
 
 export type CreateChallengeInput = {
   name: string;
   description: string;
+  startsAt: string; // ISO date
+  endsAt: string; // ISO date
+};
+
+export type UpdateChallengeInput = Partial<CreateChallengeInput> & {
+  status?: Challenge["status"];
 };
 
 export type CreateTeamInput = {
@@ -102,9 +123,11 @@ const fromChallengeSnapshot = (snapshot: QuerySnapshot<DocumentData>) =>
       id: challengeDoc.id,
       name: String(data.name ?? ""),
       description: String(data.description ?? ""),
-      status: data.status ?? "draft",
+      status: data.status === "draft" ? "active" : (data.status ?? "active"),
       adminIds: Array.isArray(data.adminIds) ? data.adminIds : [],
       createdBy: String(data.createdBy ?? ""),
+      startsAt: data.startsAt instanceof Timestamp ? data.startsAt.toDate() : null,
+      endsAt: data.endsAt instanceof Timestamp ? data.endsAt.toDate() : null,
     } satisfies Challenge;
   });
 
@@ -149,9 +172,11 @@ export function listenChallenge(
           id: snapshot.id,
           name: String(data.name ?? ""),
           description: String(data.description ?? ""),
-          status: data.status ?? "draft",
+          status: data.status === "draft" ? "active" : (data.status ?? "active"),
           adminIds: Array.isArray(data.adminIds) ? data.adminIds : [],
           createdBy: String(data.createdBy ?? ""),
+          startsAt: data.startsAt instanceof Timestamp ? data.startsAt.toDate() : null,
+          endsAt: data.endsAt instanceof Timestamp ? data.endsAt.toDate() : null,
         });
       }
     },
@@ -208,9 +233,10 @@ export function listenChallengeDetail(
   let teams: Team[] = [];
   let invites: Invite[] = [];
   let activityRules: ActivityRule[] = [];
+  let members: Member[] = [];
 
   const emit = () => {
-    onData({ teams, invites, activityRules });
+    onData({ teams, invites, activityRules, members });
   };
 
   const unsubscribers = [
@@ -278,6 +304,28 @@ export function listenChallengeDetail(
       },
       onError,
     ),
+    onSnapshot(
+      collection(firestore, "competitions", competitionId, "members"),
+      (snapshot) => {
+        members = snapshot.docs
+          .map((memberDoc) => {
+            const data = memberDoc.data();
+
+            return {
+              userId: memberDoc.id,
+              displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
+              emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
+              teamId: data.teamId ? String(data.teamId) : null,
+              role: data.role ?? "participant",
+              status: data.status ?? "active",
+              joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
+            } satisfies Member;
+          })
+          .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
+        emit();
+      },
+      onError,
+    ),
   ];
 
   return () => {
@@ -306,7 +354,9 @@ export async function createChallenge(
     description: input.description.trim(),
     createdBy: user.uid,
     adminIds: [user.uid],
-    status: "draft",
+    status: "active",
+    startsAt: input.startsAt ? Timestamp.fromDate(new Date(input.startsAt)) : null,
+    endsAt: input.endsAt ? Timestamp.fromDate(new Date(input.endsAt)) : null,
     settings: {
       activityApprovalMode: "auto",
       proofRequired: false,
@@ -333,6 +383,26 @@ export async function createChallenge(
   return competitionRef.id;
 }
 
+export async function updateChallenge(
+  competitionId: string,
+  input: UpdateChallengeInput,
+) {
+  const firestore = assertDb();
+  const competitionRef = doc(firestore, "competitions", competitionId);
+  
+  const updates: DocumentData = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (input.name) updates.name = input.name.trim();
+  if (input.description !== undefined) updates.description = input.description.trim();
+  if (input.startsAt) updates.startsAt = Timestamp.fromDate(new Date(input.startsAt));
+  if (input.endsAt) updates.endsAt = Timestamp.fromDate(new Date(input.endsAt));
+  if (input.status) updates.status = input.status;
+
+  await updateDoc(competitionRef, updates);
+}
+
 export async function createTeam(input: CreateTeamInput) {
   const firestore = assertDb();
 
@@ -340,6 +410,20 @@ export async function createTeam(input: CreateTeamInput) {
     name: input.name.trim(),
     color: input.color,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function assignTeam(
+  competitionId: string,
+  userId: string,
+  teamId: string | null,
+) {
+  const firestore = assertDb();
+  const memberRef = doc(firestore, "competitions", competitionId, "members", userId);
+
+  await updateDoc(memberRef, {
+    teamId,
     updatedAt: serverTimestamp(),
   });
 }
@@ -360,6 +444,64 @@ export async function createInvite(input: CreateInviteInput, createdBy: string) 
       disabledAt: null,
     },
   );
+}
+
+export async function joinChallenge(user: User, code: string) {
+  const firestore = assertDb();
+  
+  // Find the invite
+  const invitesQuery = query(
+    collectionGroup(firestore, "invites"),
+    where("code", "==", code.toUpperCase()),
+  );
+  
+  const inviteSnapshot = await getDocs(invitesQuery);
+  if (inviteSnapshot.empty) {
+    throw new Error("Invalid invite code.");
+  }
+  
+  const inviteDoc = inviteSnapshot.docs[0];
+  const inviteData = inviteDoc.data();
+  const competitionId = inviteDoc.ref.parent.parent!.id;
+  
+  if (inviteData.disabledAt) {
+    throw new Error("This invite has been disabled.");
+  }
+  
+  if (inviteData.maxUses && inviteData.usedCount >= inviteData.maxUses) {
+    throw new Error("This invite has reached its maximum use limit.");
+  }
+  
+  // Check if already a member
+  const memberRef = doc(firestore, "competitions", competitionId, "members", user.uid);
+  const memberSnapshot = await getDoc(memberRef);
+  
+  if (memberSnapshot.exists() && memberSnapshot.data().status === "active") {
+    return competitionId; // Already a member
+  }
+  
+  const batch = writeBatch(firestore);
+  const now = serverTimestamp();
+  
+  batch.set(memberRef, {
+    userId: user.uid,
+    displayNameSnapshot: user.displayName ?? user.email ?? "Participant",
+    emailSnapshot: user.email ?? null,
+    teamId: inviteData.teamId || null,
+    role: "participant",
+    status: "active",
+    joinedAt: now,
+    invitedBy: inviteData.createdBy,
+  });
+  
+  batch.update(inviteDoc.ref, {
+    usedCount: (inviteData.usedCount || 0) + 1,
+    updatedAt: now,
+  });
+  
+  await batch.commit();
+  
+  return competitionId;
 }
 
 export async function createActivityRule(input: CreateActivityRuleInput) {

@@ -51,9 +51,11 @@ describe("ChallengeAdmin", () => {
         id: "challenge-1",
         name: "Summer Challenge",
         description: "Preseason setup",
-        status: "draft",
+        status: "active",
         adminIds: ["user-1"],
         createdBy: "user-1",
+        startsAt: new Date("2026-06-01"),
+        endsAt: new Date("2026-08-31"),
       });
 
       return vi.fn();
@@ -64,6 +66,7 @@ describe("ChallengeAdmin", () => {
         teams: [],
         invites: [],
         activityRules: [],
+        members: [],
       });
 
       return vi.fn();
@@ -84,7 +87,14 @@ describe("ChallengeAdmin", () => {
 
     const teamNameInput = screen.getByLabelText(/team name/i);
     await user.type(teamNameInput, "Team Red");
-    await user.selectOptions(screen.getByLabelText(/^color$/i), "#dc2626");
+    
+    // In our new UI, color is an input type="color"
+    const colorInput = screen.getByLabelText(/color/i);
+    // userEvent.type doesn't work well with type="color" in jsdom usually, 
+    // but we can at least check if it exists and change its value.
+    // However, userEvent.selectOptions definitely won't work.
+    vi.mocked(colorInput).value = "#dc2626";
+    
     await user.click(screen.getByRole("button", { name: /^add team$/i }));
 
     await waitFor(() => {

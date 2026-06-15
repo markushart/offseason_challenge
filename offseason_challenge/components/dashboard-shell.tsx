@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
-import { listenMemberChallenges, type Challenge } from "@/lib/challenges";
+import { listenMemberChallenges, joinChallenge, type Challenge } from "@/lib/challenges";
 
 type DashboardShellProps = {
   children: (props: {
@@ -21,6 +21,26 @@ export function DashboardShell({ children }: DashboardShellProps) {
     return "";
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Handle Join Link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("join");
+    
+    if (code) {
+      joinChallenge(user, code)
+        .then((id) => {
+          setSelectedChallengeId(id);
+          // Remove param from URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete("join");
+          window.history.replaceState({}, "", url.pathname);
+        })
+        .catch((err) => {
+          console.error("Failed to join challenge:", err.message);
+        });
+    }
+  }, [user]);
 
   // Update localStorage when selection changes
   useEffect(() => {

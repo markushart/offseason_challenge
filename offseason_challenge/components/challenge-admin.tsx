@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
 import {
+  assignTeam,
   createActivityRule,
   createChallenge,
   createInvite,
@@ -10,9 +11,11 @@ import {
   listenChallenge,
   listenChallengeDetail,
   setActivityRuleEnabled,
+  updateChallenge,
   type ActivityRule,
   type Challenge,
   type ChallengeDetail,
+  type Member,
   type Team,
 } from "@/lib/challenges";
 import { hasFirebaseConfig } from "@/lib/firebase";
@@ -30,6 +33,7 @@ const emptyDetail: ChallengeDetail = {
   teams: [],
   invites: [],
   activityRules: [],
+  members: [],
 };
 
 export function ChallengeAdmin({ 
@@ -44,11 +48,11 @@ export function ChallengeAdmin({
   const [detail, setDetail] = useState<ChallengeDetail>(emptyDetail);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch only the selected challenge document
   useEffect(() => {
     if (!selectedChallengeId || !hasFirebaseConfig) {
-      // Use a microtask to avoid synchronous setState in effect lint error
       Promise.resolve().then(() => setSelectedChallenge(null));
       return;
     }
@@ -68,7 +72,6 @@ export function ChallengeAdmin({
     );
   }, [selectedChallengeId]);
 
-  const activeDetail = selectedChallengeId ? detail : emptyDetail;
   const isAdmin = selectedChallenge?.adminIds.includes(user.uid);
 
   const handleCreateChallenge = async (event: FormEvent<HTMLFormElement>) => {
@@ -77,9 +80,11 @@ export function ChallengeAdmin({
     const formData = new FormData(form);
     const name = String(formData.get("challengeName") ?? "").trim();
     const description = String(formData.get("challengeDescription") ?? "").trim();
+    const startsAt = String(formData.get("startsAt") ?? "");
+    const endsAt = String(formData.get("endsAt") ?? "");
 
-    if (!name) {
-      setError("Add a challenge name first.");
+    if (!name || !startsAt || !endsAt) {
+      setError("Add a name and both dates.");
       return;
     }
 
@@ -87,11 +92,45 @@ export function ChallengeAdmin({
     setIsSaving(true);
 
     try {
-      const challengeId = await createChallenge(user, { name, description });
+      const challengeId = await createChallenge(user, { 
+        name, 
+        description,
+        startsAt,
+        endsAt
+      });
       onChallengeCreated(challengeId);
       form.reset();
     } catch (createError) {
       setError(getMessage(createError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateChallenge = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedChallenge) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get("challengeName") ?? "").trim();
+    const description = String(formData.get("challengeDescription") ?? "").trim();
+    const startsAt = String(formData.get("startsAt") ?? "");
+    const endsAt = String(formData.get("endsAt") ?? "");
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await updateChallenge(selectedChallenge.id, {
+        name,
+        description,
+        startsAt,
+        endsAt,
+      });
+      setIsEditing(false);
+    } catch (updateError) {
+      setError(getMessage(updateError));
     } finally {
       setIsSaving(false);
     }
@@ -215,6 +254,15 @@ export function ChallengeAdmin({
     }
   };
 
+  const handleAssignTeam = async (userId: string, teamId: string | null) => {
+    if (!selectedChallenge) return;
+    try {
+      await assignTeam(selectedChallenge.id, userId, teamId);
+    } catch (err) {
+      setError(getMessage(err));
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
@@ -225,18 +273,28 @@ export function ChallengeAdmin({
           <h1 className="text-3xl font-bold tracking-tight text-brand-strong sm:text-4xl">
             {selectedChallenge ? selectedChallenge.name : "Create a new challenge"}
           </h1>
-          <p className="mt-2 max-w-2xl text-base text-muted font-medium">
-            {selectedChallenge 
-              ? selectedChallenge.description || "Manage teams, invites, and activities."
-              : "Welcome! Create a new team competition to get started."}
-          </p>
+          <div className="mt-2 flex items-center gap-4">
+             <p className="max-w-2xl text-base text-muted font-medium">
+              {selectedChallenge 
+                ? selectedChallenge.description || "Manage teams, invites, and activities."
+                : "Welcome! Create a new team competition to get started."}
+            </p>
+            {isAdmin && selectedChallenge && (
+              <button 
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-xs font-black uppercase tracking-widest text-brand hover:underline"
+              >
+                {isEditing ? "Cancel" : "Edit Details"}
+              </button>
+            )}
+          </div>
         </div>
 
-        {selectedChallenge && (
+        {selectedChallenge && !isEditing && (
           <div className="flex gap-3 overflow-x-auto pb-2 sm:pb-0">
-            <Metric label="Status" value={selectedChallenge.status} />
-            <Metric label="Teams" value={String(activeDetail.teams.length)} />
-            <Metric label="Activities" value={String(activeDetail.activityRules.length)} />
+            <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
+            <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
+            <Metric label="Teams" value={String(detail.teams.length)} />
           </div>
         )}
       </header>
@@ -260,6 +318,7 @@ export function ChallengeAdmin({
                 <input
                   maxLength={80}
                   name="challengeName"
+                  required
                   placeholder="Handball Offseason 2026"
                 />
               </label>
@@ -271,6 +330,16 @@ export function ChallengeAdmin({
                   placeholder="Preseason points competition for the senior team"
                 />
               </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label>
+                  <span>Starts At</span>
+                  <input name="startsAt" required type="date" />
+                </label>
+                <label>
+                  <span>Ends At</span>
+                  <input name="endsAt" required type="date" />
+                </label>
+              </div>
               <button
                 className="button-primary mt-2"
                 disabled={isSaving || !hasFirebaseConfig}
@@ -281,24 +350,84 @@ export function ChallengeAdmin({
             </form>
           </div>
         </div>
+      ) : isEditing && selectedChallenge ? (
+        <div className="max-w-xl mx-auto w-full py-8">
+          <div className="panel flex flex-col gap-6 shadow-xl border-brand/20">
+            <h2 className="text-xl font-bold text-brand-strong">Edit challenge</h2>
+            <form className="grid gap-4" onSubmit={handleUpdateChallenge}>
+              <label>
+                <span>Challenge Name</span>
+                <input
+                  defaultValue={selectedChallenge.name}
+                  maxLength={80}
+                  name="challengeName"
+                  required
+                />
+              </label>
+              <label>
+                <span>Description</span>
+                <input
+                  defaultValue={selectedChallenge.description}
+                  maxLength={240}
+                  name="challengeDescription"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label>
+                  <span>Starts At</span>
+                  <input 
+                    defaultValue={selectedChallenge.startsAt?.toISOString().slice(0, 10)} 
+                    name="startsAt" 
+                    required 
+                    type="date" 
+                  />
+                </label>
+                <label>
+                  <span>Ends At</span>
+                  <input 
+                    defaultValue={selectedChallenge.endsAt?.toISOString().slice(0, 10)} 
+                    name="endsAt" 
+                    required 
+                    type="date" 
+                  />
+                </label>
+              </div>
+              <button
+                className="button-primary mt-2"
+                disabled={isSaving}
+                type="submit"
+              >
+                {isSaving ? "Saving..." : "Save changes"}
+              </button>
+            </form>
+          </div>
+        </div>
       ) : isAdmin ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <TeamPanel
-            isSaving={isSaving}
-            onCreateTeam={handleCreateTeam}
-            teams={activeDetail.teams}
-          />
-          <InvitePanel
-            invites={activeDetail.invites}
-            isSaving={isSaving}
-            onCreateInvite={handleCreateInvite}
-            teams={activeDetail.teams}
-          />
-          <ActivityPanel
-            activityRules={activeDetail.activityRules}
-            isSaving={isSaving}
-            onCreateActivity={handleCreateActivity}
-            onToggleActivity={handleToggleActivity}
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <TeamPanel
+              isSaving={isSaving}
+              onCreateTeam={handleCreateTeam}
+              teams={detail.teams}
+            />
+            <InvitePanel
+              invites={detail.invites}
+              isSaving={isSaving}
+              onCreateInvite={handleCreateInvite}
+              teams={detail.teams}
+            />
+            <ActivityPanel
+              activityRules={detail.activityRules}
+              isSaving={isSaving}
+              onCreateActivity={handleCreateActivity}
+              onToggleActivity={handleToggleActivity}
+            />
+          </div>
+          
+          <MemberPanel 
+            members={detail.members} 
+            onAssignTeam={handleAssignTeam} 
+            teams={detail.teams} 
           />
         </div>
       ) : selectedChallenge ? (
@@ -336,13 +465,15 @@ function TeamPanel({
         </label>
         <label>
           <span>Color</span>
-          <select name="teamColor">
-            {teamColors.map((color) => (
-              <option key={color} value={color}>
-                {color}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2 items-center">
+             <input 
+              className="w-12 h-12 p-1 cursor-pointer"
+              defaultValue={teamColors[0]}
+              name="teamColor"
+              type="color" 
+            />
+            <span className="text-xs font-bold text-muted uppercase">Pick a color</span>
+          </div>
         </label>
         <button
           className="button-primary"
@@ -389,14 +520,23 @@ function InvitePanel({
   isSaving: boolean;
   onCreateInvite: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyLink = (code: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
+    navigator.clipboard.writeText(url);
+    setCopied(code);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   return (
     <section className="panel flex flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Invites</h2>
       <form className="grid gap-4" onSubmit={onCreateInvite}>
         <label>
-          <span>Assign to team</span>
+          <span>Assign to team (Optional)</span>
           <select name="inviteTeamId">
-            <option value="">Unassigned</option>
+            <option value="">Unassigned (Recommended)</option>
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
                 {team.name}
@@ -437,13 +577,76 @@ function InvitePanel({
               <code className="rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
                 {invite.code}
               </code>
-              <span className="text-xs font-black text-muted uppercase tracking-tighter">
-                {invite.usedCount}/{invite.maxUses ?? "∞"} Uses
+              <button 
+                onClick={() => copyLink(invite.code)}
+                className="text-[10px] font-black uppercase tracking-widest bg-brand text-white px-2 py-1 rounded"
+              >
+                {copied === invite.code ? "Copied!" : "Copy Link"}
+              </button>
+            </div>
+            <p className="mt-3 text-[10px] font-extrabold text-muted uppercase tracking-wide">
+              {invite.usedCount}/{invite.maxUses ?? "∞"} Uses · {getTeamName(teams, invite.teamId)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MemberPanel({
+  members,
+  teams,
+  onAssignTeam,
+}: {
+  members: Member[];
+  teams: Team[];
+  onAssignTeam: (userId: string, teamId: string | null) => void;
+}) {
+  return (
+    <section className="panel flex flex-col gap-4">
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Members</h2>
+      <div className="grid gap-2">
+        {members.length === 0 ? (
+          <p className="p-6 text-center text-muted italic bg-surface-soft rounded-lg">
+            No members yet. Share an invite link to get started.
+          </p>
+        ) : null}
+        {members.map((member) => (
+          <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4 gap-4"
+            key={member.userId}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-brand-strong text-white font-black">
+                {member.displayNameSnapshot.slice(0, 1)}
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-brand-strong truncate">{member.displayNameSnapshot}</p>
+                <p className="text-xs text-muted font-medium truncate">{member.emailSnapshot || "No email"}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <label className="!grid-cols-[auto_1fr] items-center gap-2">
+                <span className="whitespace-nowrap">Team:</span>
+                <select 
+                  className="min-h-[38px] text-xs font-bold"
+                  value={member.teamId || ""} 
+                  onChange={(e) => onAssignTeam(member.userId, e.target.value || null)}
+                >
+                  <option value="">Unassigned</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </label>
+              <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
+                member.role === 'admin' ? "bg-accent text-white" : "bg-muted/10 text-muted"
+              }`}>
+                {member.role}
               </span>
             </div>
-            <p className="mt-3 text-xs font-extrabold text-muted uppercase tracking-wide">
-              {getTeamName(teams, invite.teamId)}
-            </p>
           </div>
         ))}
       </div>
