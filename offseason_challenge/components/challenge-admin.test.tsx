@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChallengeAdmin } from "@/components/challenge-admin";
 
 const mocks = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   createChallenge: vi.fn(),
   createInvite: vi.fn(),
   createTeam: vi.fn(),
+  deleteChallenge: vi.fn(),
   listenChallenge: vi.fn(),
   listenChallengeDetail: vi.fn(),
   setActivityRuleEnabled: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@/lib/challenges", () => ({
   createChallenge: mocks.createChallenge,
   createInvite: mocks.createInvite,
   createTeam: mocks.createTeam,
+  deleteChallenge: mocks.deleteChallenge,
   listenChallenge: mocks.listenChallenge,
   listenChallengeDetail: mocks.listenChallengeDetail,
   setActivityRuleEnabled: mocks.setActivityRuleEnabled,
@@ -44,6 +46,7 @@ describe("ChallengeAdmin", () => {
     mocks.createChallenge.mockResolvedValue("challenge-1");
     mocks.createInvite.mockResolvedValue(undefined);
     mocks.createTeam.mockResolvedValue(undefined);
+    mocks.deleteChallenge.mockResolvedValue(undefined);
     mocks.setActivityRuleEnabled.mockResolvedValue(undefined);
 
     mocks.listenChallenge.mockImplementation((_id, onData) => {
@@ -73,12 +76,17 @@ describe("ChallengeAdmin", () => {
     });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("creates a team and resets the form without losing the submit target", async () => {
     const user = userEvent.setup();
     render(
       <ChallengeAdmin 
         selectedChallengeId="challenge-1" 
         onChallengeCreated={() => {}} 
+        onChallengeDeleted={() => {}}
       />
     );
 
@@ -109,5 +117,90 @@ describe("ChallengeAdmin", () => {
     expect(
       screen.queryByText(/cannot read properties of null/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("archives a challenge after delete confirmation", async () => {
+    const user = userEvent.setup();
+    const onChallengeDeleted = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={onChallengeDeleted}
+      />,
+    );
+
+    await screen.findByText("Summer Challenge");
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(mocks.deleteChallenge).toHaveBeenCalledWith("challenge-1");
+    });
+    expect(onChallengeDeleted).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows team progress to challenge members", async () => {
+    mocks.listenChallenge.mockImplementation((_id, onData) => {
+      onData({
+        id: "challenge-1",
+        name: "Summer Challenge",
+        description: "Preseason setup",
+        status: "active",
+        adminIds: ["admin-1"],
+        createdBy: "admin-1",
+        startsAt: new Date("2026-06-01"),
+        endsAt: new Date("2026-08-31"),
+      });
+
+      return vi.fn();
+    });
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [
+          { id: "team-blue", name: "Team Blue", color: "#2563eb" },
+          { id: "team-red", name: "Team Red", color: "#dc2626" },
+        ],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-1",
+            displayNameSnapshot: "Admin User",
+            emailSnapshot: "admin@example.com",
+            teamId: "team-blue",
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Second User",
+            emailSnapshot: "second@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Standings")).toBeInTheDocument();
+    expect(screen.getByText("Team Blue")).toBeInTheDocument();
+    expect(screen.getByText("Team Red")).toBeInTheDocument();
+    expect(screen.getByText("1 active member is waiting for a team.")).toBeInTheDocument();
+    expect(screen.queryByText("Participant view coming soon. You are currently a member of this team.")).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ export default function Home() {
           <ChallengeAdmin 
             selectedChallengeId={selectedChallengeId} 
             onChallengeCreated={setSelectedChallengeId} 
+            onChallengeDeleted={() => setSelectedChallengeId("")}
           />
         )}
       </DashboardShell>

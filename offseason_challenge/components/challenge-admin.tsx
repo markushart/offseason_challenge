@@ -8,6 +8,7 @@ import {
   createChallenge,
   createInvite,
   createTeam,
+  deleteChallenge,
   listenChallenge,
   listenChallengeDetail,
   setActivityRuleEnabled,
@@ -38,10 +39,12 @@ const emptyDetail: ChallengeDetail = {
 
 export function ChallengeAdmin({ 
   selectedChallengeId, 
-  onChallengeCreated 
+  onChallengeCreated,
+  onChallengeDeleted,
 }: { 
   selectedChallengeId: string; 
   onChallengeCreated: (id: string) => void;
+  onChallengeDeleted: () => void;
 }) {
   const user = useSignedInUser();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
@@ -131,6 +134,32 @@ export function ChallengeAdmin({
       setIsEditing(false);
     } catch (updateError) {
       setError(getMessage(updateError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteChallenge = async () => {
+    if (!selectedChallenge) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${selectedChallenge.name}"? This will remove it from challenge lists.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await deleteChallenge(selectedChallenge.id);
+      onChallengeDeleted();
+    } catch (deleteError) {
+      setError(getMessage(deleteError));
     } finally {
       setIsSaving(false);
     }
@@ -293,6 +322,16 @@ export function ChallengeAdmin({
             <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Teams" value={String(detail.teams.length)} />
+            {isAdmin ? (
+              <button
+                className="button-secondary border-danger/30 text-danger hover:bg-danger/10"
+                disabled={isSaving}
+                onClick={handleDeleteChallenge}
+                type="button"
+              >
+                Delete
+              </button>
+            ) : null}
           </div>
         )}
       </header>
@@ -402,6 +441,8 @@ export function ChallengeAdmin({
         </div>
       ) : isAdmin ? (
         <div className="flex flex-col gap-6">
+          <ChallengeOverview teams={detail.teams} members={detail.members} />
+
           <div className="grid gap-6 lg:grid-cols-3">
             <TeamPanel
               isSaving={isSaving}
@@ -429,14 +470,99 @@ export function ChallengeAdmin({
           />
         </div>
       ) : selectedChallenge ? (
-        <div className="p-16 text-center border-2 border-dashed border-line rounded-2xl bg-surface-soft/50">
-          <h2 className="text-2xl font-bold text-brand-strong">Welcome to {selectedChallenge.name}</h2>
-          <p className="mt-3 text-muted font-medium max-w-md mx-auto">
-            Participant view coming soon. You are currently a member of this team.
+        <ChallengeOverview teams={detail.teams} members={detail.members} />
+      ) : null}
+    </div>
+  );
+}
+
+function ChallengeOverview({
+  teams,
+  members,
+}: {
+  teams: Team[];
+  members: Member[];
+}) {
+  const activeMembers = members.filter((member) => member.status === "active");
+  const unassignedMembers = activeMembers.filter((member) => !member.teamId);
+  const teamRows = teams.map((team) => {
+    const teamMembers = activeMembers.filter((member) => member.teamId === team.id);
+
+    return {
+      ...team,
+      memberCount: teamMembers.length,
+      points: 0,
+    };
+  });
+  const highestPoints = Math.max(1, ...teamRows.map((team) => team.points));
+
+  return (
+    <section className="panel flex flex-col gap-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">Team Progress</p>
+          <h2 className="text-2xl font-bold text-brand-strong">Standings</h2>
+        </div>
+        <div className="flex gap-2">
+          <Metric label="Teams" value={String(teams.length)} />
+          <Metric label="Members" value={String(activeMembers.length)} />
+        </div>
+      </div>
+
+      {teams.length === 0 ? (
+        <p className="rounded-lg bg-surface-soft p-6 text-center text-sm font-medium text-muted">
+          Teams will appear here once the challenge admin creates them.
+        </p>
+      ) : (
+        <div className="grid gap-3">
+          {teamRows.map((team, index) => (
+            <div
+              className="rounded-lg border border-line bg-surface-soft/30 p-4"
+              key={team.id}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="text-sm font-black text-muted">#{index + 1}</span>
+                  <span
+                    className="h-4 w-4 flex-shrink-0 rounded-full shadow-sm"
+                    style={{ backgroundColor: team.color }}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-brand-strong">{team.name}</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                      {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
+                    </p>
+                  </div>
+                </div>
+                <strong className="text-2xl font-black text-brand-strong">
+                  {team.points}
+                </strong>
+              </div>
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    backgroundColor: team.color,
+                    width: `${Math.max(4, (team.points / highestPoints) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {unassignedMembers.length > 0 ? (
+        <div className="rounded-lg border border-line bg-white p-4">
+          <p className="text-xs font-black uppercase tracking-widest text-muted">
+            Unassigned
+          </p>
+          <p className="mt-1 text-sm font-medium text-brand-strong">
+            {unassignedMembers.length} active {unassignedMembers.length === 1 ? "member is" : "members are"} waiting for a team.
           </p>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }
 

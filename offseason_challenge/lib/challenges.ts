@@ -129,6 +129,9 @@ const fromChallengeSnapshot = (snapshot: QuerySnapshot<DocumentData>) =>
     } satisfies Challenge;
   });
 
+const onlyVisibleChallenges = (challenges: Challenge[]) =>
+  challenges.filter((challenge) => challenge.status !== "archived");
+
 const createInviteCode = () =>
   Math.random().toString(36).slice(2, 8).toUpperCase();
 
@@ -146,9 +149,8 @@ export function listenAdminChallenges(
   return onSnapshot(
     challengesQuery,
     (snapshot) => {
-      const challenges = fromChallengeSnapshot(snapshot).sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
+      const challenges = onlyVisibleChallenges(fromChallengeSnapshot(snapshot))
+        .sort((a, b) => a.name.localeCompare(b.name));
       onData(challenges);
     },
     onError,
@@ -219,7 +221,7 @@ export function listenMemberChallenges(
     onSnapshot(
       challengesQuery,
       (snapshot) => {
-        const nextChallenges = fromChallengeSnapshot(snapshot);
+        const nextChallenges = onlyVisibleChallenges(fromChallengeSnapshot(snapshot));
 
         removeMissingChallenges(nextChallenges, sourceIds);
         nextChallenges.forEach((challenge) => {
@@ -429,6 +431,15 @@ export async function updateChallenge(
   if (input.status) updates.status = input.status;
 
   await updateDoc(competitionRef, updates);
+}
+
+export async function deleteChallenge(competitionId: string) {
+  const firestore = assertDb();
+
+  await updateDoc(doc(firestore, "competitions", competitionId), {
+    status: "archived",
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function createTeam(input: CreateTeamInput) {

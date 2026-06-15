@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createInvite, joinChallenge } from "@/lib/challenges";
+import { createInvite, deleteChallenge, joinChallenge } from "@/lib/challenges";
 
 const mocks = vi.hoisted(() => ({
   addDoc: vi.fn(),
@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getDocs: vi.fn(),
   query: vi.fn(),
   serverTimestamp: vi.fn(),
+  updateDoc: vi.fn(),
   where: vi.fn(),
   writeBatch: vi.fn(),
 }));
@@ -29,6 +30,7 @@ vi.mock("firebase/firestore", () => ({
   getDocs: mocks.getDocs,
   query: mocks.query,
   serverTimestamp: mocks.serverTimestamp,
+  updateDoc: mocks.updateDoc,
   where: mocks.where,
   writeBatch: mocks.writeBatch,
 }));
@@ -48,6 +50,7 @@ describe("joinChallenge", () => {
     mocks.query.mockReturnValue("invite-query");
     mocks.serverTimestamp.mockReturnValue("ts");
     mocks.doc.mockReturnValue("member-ref");
+    mocks.updateDoc.mockResolvedValue(undefined);
   });
 
   it("creates reusable invites without usage limit fields", async () => {
@@ -81,6 +84,16 @@ describe("joinChallenge", () => {
         teamId: null,
       }),
     );
+  });
+
+  it("archives a challenge when deleting", async () => {
+    await deleteChallenge("competition-1");
+
+    expect(mocks.doc).toHaveBeenCalledWith({}, "competitions", "competition-1");
+    expect(mocks.updateDoc).toHaveBeenCalledWith("member-ref", {
+      status: "archived",
+      updatedAt: "ts",
+    });
   });
 
   it("creates a participant membership from a valid invite code", async () => {
