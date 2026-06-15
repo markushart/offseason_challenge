@@ -3,6 +3,7 @@ import { createInvite, joinChallenge } from "@/lib/challenges";
 
 const mocks = vi.hoisted(() => ({
   addDoc: vi.fn(),
+  arrayUnion: vi.fn(),
   collection: vi.fn(),
   collectionGroup: vi.fn(),
   doc: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("@/lib/firebase", () => ({
 
 vi.mock("firebase/firestore", () => ({
   addDoc: mocks.addDoc,
+  arrayUnion: mocks.arrayUnion,
   collection: mocks.collection,
   collectionGroup: mocks.collectionGroup,
   doc: mocks.doc,
@@ -35,6 +37,7 @@ describe("joinChallenge", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.addDoc.mockResolvedValue({ id: "invite-1" });
+    mocks.arrayUnion.mockReturnValue("member-array-union");
     mocks.collection.mockReturnValue("invites-collection");
     mocks.collectionGroup.mockReturnValue("invites-group");
     mocks.where.mockImplementation((field: string, op: string, value: string) => ({
@@ -82,6 +85,7 @@ describe("joinChallenge", () => {
 
   it("creates a participant membership from a valid invite code", async () => {
     const batchSet = vi.fn();
+    const batchUpdate = vi.fn();
     const batchCommit = vi.fn().mockResolvedValue(undefined);
 
     mocks.getDocs.mockResolvedValue({
@@ -94,7 +98,11 @@ describe("joinChallenge", () => {
       ],
     });
     mocks.getDoc.mockResolvedValue({ exists: () => false });
-    mocks.writeBatch.mockReturnValue({ commit: batchCommit, set: batchSet });
+    mocks.writeBatch.mockReturnValue({
+      commit: batchCommit,
+      set: batchSet,
+      update: batchUpdate,
+    });
 
     const competitionId = await joinChallenge(
       { displayName: "Player", email: "player@example.com", uid: "user-1" } as never,
@@ -111,6 +119,13 @@ describe("joinChallenge", () => {
         status: "active",
         teamId: "team-1",
         invitedBy: "admin-1",
+      }),
+    );
+    expect(batchUpdate).toHaveBeenCalledWith(
+      "member-ref",
+      expect.objectContaining({
+        memberIds: "member-array-union",
+        updatedAt: "ts",
       }),
     );
     expect(batchCommit).toHaveBeenCalledTimes(1);

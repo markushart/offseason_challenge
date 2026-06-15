@@ -1,10 +1,10 @@
 import type { User } from "firebase/auth";
 import {
   addDoc,
+  arrayUnion,
   collection,
   collectionGroup,
   doc,
-  documentId,
   getDoc,
   getDocs,
   onSnapshot,
@@ -16,6 +16,7 @@ import {
   writeBatch,
   type DocumentData,
   type FirestoreError,
+  type Query,
   type QuerySnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -187,52 +188,69 @@ export function listenMemberChallenges(
   onError: (error: FirestoreError) => void,
 ): Unsubscribe {
   const firestore = assertDb();
-  const membershipsQuery = query(
-    collectionGroup(firestore, "members"),
-    where("userId", "==", userId),
-  );
+  const challengeMap = new Map<string, Challenge>();
+  const adminChallengeIds = new Set<string>();
+  const memberChallengeIds = new Set<string>();
 
-  return onSnapshot(
-    membershipsQuery,
-    (snapshot) => {
-      const competitionIds = Array.from(
-        new Set(
-          snapshot.docs
-            .filter((mDoc) => mDoc.data().status === "active")
-            .map((mDoc) => mDoc.ref.parent.parent!.id),
-        ),
-      );
+  const emit = () => {
+    onData(
+      Array.from(challengeMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    );
+  };
 
-      if (competitionIds.length === 0) {
-        onData([]);
-        return;
+  const removeMissingChallenges = (
+    nextChallenges: Challenge[],
+    sourceIds: Set<string>,
+  ) => {
+    for (const challengeId of sourceIds) {
+      if (!nextChallenges.some((challenge) => challenge.id === challengeId)) {
+        challengeMap.delete(challengeId);
+        sourceIds.delete(challengeId);
       }
+    }
+  };
 
-      const competitionIdChunks = Array.from(
-        { length: Math.ceil(competitionIds.length / 30) },
-        (_, index) => competitionIds.slice(index * 30, (index + 1) * 30),
-      );
+  const subscribeToChallenges = (
+    challengesQuery: Query<DocumentData>,
+    sourceIds: Set<string>,
+  ) =>
+    onSnapshot(
+      challengesQuery,
+      (snapshot) => {
+        const nextChallenges = fromChallengeSnapshot(snapshot);
 
-      Promise.all(
-        competitionIdChunks.map((ids) =>
-          getDocs(
-            query(
-              collection(firestore, "competitions"),
-              where(documentId(), "in", ids),
-            ),
-          ),
-        ),
-      )
-        .then((snapshots) => {
-          const challenges = snapshots
-            .flatMap((compSnapshot) => fromChallengeSnapshot(compSnapshot))
-            .sort((a, b) => a.name.localeCompare(b.name));
-          onData(challenges);
-        })
-        .catch(onError);
-    },
-    onError,
-  );
+        removeMissingChallenges(nextChallenges, sourceIds);
+        nextChallenges.forEach((challenge) => {
+          challengeMap.set(challenge.id, challenge);
+          sourceIds.add(challenge.id);
+        });
+        emit();
+      },
+      onError,
+    );
+
+  const unsubscribers = [
+    subscribeToChallenges(
+      query(
+        collection(firestore, "competitions"),
+        where("adminIds", "array-contains", userId),
+      ),
+      adminChallengeIds,
+    ),
+    subscribeToChallenges(
+      query(
+        collection(firestore, "competitions"),
+        where("memberIds", "array-contains", userId),
+      ),
+      memberChallengeIds,
+    ),
+  ];
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  };
 }
 
 export function listenChallengeDetail(
@@ -363,6 +381,7 @@ export async function createChallenge(
     description: input.description.trim(),
     createdBy: user.uid,
     adminIds: [user.uid],
+    memberIds: [user.uid],
     status: "active",
     startsAt: input.startsAt ? Timestamp.fromDate(new Date(input.startsAt)) : null,
     endsAt: input.endsAt ? Timestamp.fromDate(new Date(input.endsAt)) : null,
@@ -468,6 +487,7 @@ export async function joinChallenge(user: User, code: string) {
   const inviteDoc = inviteSnapshot.docs[0];
   const inviteData = inviteDoc.data();
   const competitionId = inviteDoc.ref.parent.parent!.id;
+  const competitionRef = doc(firestore, "competitions", competitionId);
   
   if (inviteData.disabledAt) {
     throw new Error("This invite has been disabled.");
@@ -493,6 +513,10 @@ export async function joinChallenge(user: User, code: string) {
     status: "active",
     joinedAt: now,
     invitedBy: inviteData.createdBy,
+  });
+  batch.update(competitionRef, {
+    memberIds: arrayUnion(user.uid),
+    updatedAt: now,
   });
 
   await batch.commit();

@@ -67,6 +67,14 @@ service cloud.firestore {
       return isCompetitionAdmin(competitionId) || isCompetitionMember(competitionId);
     }
 
+    function canReadCompetitionData(data) {
+      return signedIn() &&
+        (
+          request.auth.uid in data.adminIds ||
+          ("memberIds" in data && request.auth.uid in data.memberIds)
+        );
+    }
+
     function validString(value, minSize, maxSize) {
       return value is string && value.size() >= minSize && value.size() <= maxSize;
     }
@@ -108,6 +116,10 @@ service cloud.firestore {
         data.adminIds is list &&
         data.adminIds.size() >= 1 &&
         data.adminIds.size() <= 20 &&
+        (!("memberIds" in data) ||
+          (data.memberIds is list &&
+            data.memberIds.size() >= 1 &&
+            data.memberIds.size() <= 500)) &&
         data.status in ["draft", "active", "completed", "archived"] &&
         validSettings(data.settings) &&
         (!("startsAt" in data) || data.startsAt == null || data.startsAt is timestamp) &&
@@ -132,6 +144,20 @@ service cloud.firestore {
         data.adminIds == resource.data.adminIds &&
         data.createdAt == resource.data.createdAt &&
         data.updatedAt == request.time;
+    }
+
+    function validCompetitionMemberJoin(data, competitionId) {
+      return validCompetitionUpdate(data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "memberIds",
+          "updatedAt"
+        ]) &&
+        "memberIds" in data &&
+        request.auth.uid in data.memberIds &&
+        (!("memberIds" in resource.data) ||
+          data.memberIds.hasAll(resource.data.memberIds)) &&
+        getAfter(memberPath(competitionId, request.auth.uid)).data.userId == request.auth.uid &&
+        getAfter(memberPath(competitionId, request.auth.uid)).data.status == "active";
     }
 
     function validMember(data, userId) {
@@ -268,10 +294,16 @@ service cloud.firestore {
     }
 
     match /competitions/{competitionId} {
-      allow read: if canReadCompetition(competitionId);
+      allow read: if canReadCompetitionData(resource.data) ||
+        canReadCompetition(competitionId);
       allow create: if signedIn() && validCompetitionCreate(request.resource.data);
-      allow update: if isCompetitionAdmin(competitionId) &&
-        validCompetitionUpdate(request.resource.data);
+      allow update: if (
+          isCompetitionAdmin(competitionId) &&
+          validCompetitionUpdate(request.resource.data)
+        ) || (
+          signedIn() &&
+          validCompetitionMemberJoin(request.resource.data, competitionId)
+        );
       allow delete: if false;
 
       match /members/{userId} {

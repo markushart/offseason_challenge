@@ -37,6 +37,7 @@ Stores platform-level profile data. Competition-specific roles and team membersh
   "description": "Preseason points competition",
   "createdBy": "userId",
   "adminIds": ["userId"],
+  "memberIds": ["userId"],
   "status": "draft",
   "startsAt": "timestamp",
   "endsAt": "timestamp",
