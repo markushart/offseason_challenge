@@ -200,9 +200,6 @@ service cloud.firestore {
           "code",
           "createdBy",
           "teamId",
-          "maxUses",
-          "usedCount",
-          "expiresAt",
           "createdAt",
           "disabledAt"
         ]) &&
@@ -210,10 +207,6 @@ service cloud.firestore {
         data.code.matches("^[A-Z0-9]{6}$") &&
         data.createdBy is string &&
         validNullableString(data.teamId, 128) &&
-        (data.maxUses == null || (data.maxUses is int && data.maxUses >= 1 && data.maxUses <= 1000)) &&
-        data.usedCount is int &&
-        data.usedCount >= 0 &&
-        (data.expiresAt == null || data.expiresAt is timestamp) &&
         data.createdAt is timestamp &&
         (data.disabledAt == null || data.disabledAt is timestamp);
     }
@@ -221,7 +214,6 @@ service cloud.firestore {
     function validInviteCreate(data) {
       return validInvite(data) &&
         data.createdBy == request.auth.uid &&
-        data.usedCount == 0 &&
         data.createdAt == request.time &&
         data.disabledAt == null;
     }
@@ -284,7 +276,12 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if isCompetitionAdmin(competitionId) || isOwner(userId);
-        allow create: if isCompetitionAdminAfter(competitionId) &&
+        allow create: if (
+            isCompetitionAdminAfter(competitionId) ||
+            (isOwner(userId) &&
+              request.resource.data.role == "participant" &&
+              request.resource.data.status == "active")
+          ) &&
           validMemberCreate(request.resource.data, userId);
         allow update: if isCompetitionAdmin(competitionId) &&
           validMemberUpdate(request.resource.data, userId);
@@ -320,7 +317,7 @@ service cloud.firestore {
     }
 
     match /{path=**}/members/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
     }
     
     match /{path=**}/invites/{inviteId} {

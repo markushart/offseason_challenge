@@ -14,9 +14,10 @@ type DashboardShellProps = {
 export function DashboardShell({ children }: DashboardShellProps) {
   const user = useSignedInUser();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("lastActiveChallengeId") ?? "";
+      return window.localStorage?.getItem?.("lastActiveChallengeId") ?? "";
     }
     return "";
   });
@@ -30,6 +31,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     if (code) {
       joinChallenge(user, code)
         .then((id) => {
+          setJoinError(null);
           setSelectedChallengeId(id);
           // Remove param from URL
           const url = new URL(window.location.href);
@@ -38,6 +40,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         })
         .catch((err) => {
           console.error("Failed to join challenge:", err.message);
+          setJoinError(err instanceof Error ? err.message : "Failed to join challenge.");
         });
     }
   }, [user]);
@@ -45,7 +48,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   // Update localStorage when selection changes
   useEffect(() => {
     if (selectedChallengeId) {
-      localStorage.setItem("lastActiveChallengeId", selectedChallengeId);
+      window.localStorage?.setItem?.("lastActiveChallengeId", selectedChallengeId);
     }
   }, [selectedChallengeId]);
 
@@ -161,6 +164,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          {joinError ? (
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+              {joinError}
+            </p>
+          ) : null}
           {children({ selectedChallengeId, setSelectedChallengeId })}
         </main>
       </div>

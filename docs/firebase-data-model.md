@@ -102,15 +102,12 @@ Suggested statuses:
   "code": "ABC123",
   "createdBy": "adminUserId",
   "teamId": null,
-  "maxUses": null,
-  "usedCount": 0,
-  "expiresAt": "timestamp",
   "createdAt": "serverTimestamp",
   "disabledAt": null
 }
 ```
 
-An invite may optionally preselect a team. If `teamId` is null, the participant joins the competition as unassigned.
+An invite link may be reused by anyone with the code. It may optionally preselect a team. If `teamId` is null, the participant joins the competition as unassigned.
 
 ## `competitions/{competitionId}/activityRules/{activityRuleId}`
 

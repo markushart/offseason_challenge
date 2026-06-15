@@ -42,8 +42,6 @@ export type Invite = {
   id: string;
   code: string;
   teamId: string | null;
-  usedCount: number;
-  maxUses: number | null;
   disabledAt: unknown | null;
 };
 
@@ -96,7 +94,6 @@ export type CreateTeamInput = {
 export type CreateInviteInput = {
   competitionId: string;
   teamId: string | null;
-  maxUses: number | null;
 };
 
 export type CreateActivityRuleInput = {
@@ -193,29 +190,43 @@ export function listenMemberChallenges(
   const membershipsQuery = query(
     collectionGroup(firestore, "members"),
     where("userId", "==", userId),
-    where("status", "==", "active"),
   );
 
   return onSnapshot(
     membershipsQuery,
     (snapshot) => {
-      const competitionIds = snapshot.docs.map((mDoc) => mDoc.ref.parent.parent!.id);
+      const competitionIds = Array.from(
+        new Set(
+          snapshot.docs
+            .filter((mDoc) => mDoc.data().status === "active")
+            .map((mDoc) => mDoc.ref.parent.parent!.id),
+        ),
+      );
 
       if (competitionIds.length === 0) {
         onData([]);
         return;
       }
 
-      const competitionsQuery = query(
-        collection(firestore, "competitions"),
-        where(documentId(), "in", competitionIds.slice(0, 30)),
+      const competitionIdChunks = Array.from(
+        { length: Math.ceil(competitionIds.length / 30) },
+        (_, index) => competitionIds.slice(index * 30, (index + 1) * 30),
       );
 
-      getDocs(competitionsQuery)
-        .then((compSnapshot) => {
-          const challenges = fromChallengeSnapshot(compSnapshot).sort((a, b) =>
-            a.name.localeCompare(b.name),
-          );
+      Promise.all(
+        competitionIdChunks.map((ids) =>
+          getDocs(
+            query(
+              collection(firestore, "competitions"),
+              where(documentId(), "in", ids),
+            ),
+          ),
+        ),
+      )
+        .then((snapshots) => {
+          const challenges = snapshots
+            .flatMap((compSnapshot) => fromChallengeSnapshot(compSnapshot))
+            .sort((a, b) => a.name.localeCompare(b.name));
           onData(challenges);
         })
         .catch(onError);
@@ -269,8 +280,6 @@ export function listenChallengeDetail(
               id: inviteDoc.id,
               code: String(data.code ?? ""),
               teamId: typeof data.teamId === "string" ? data.teamId : null,
-              usedCount: Number(data.usedCount ?? 0),
-              maxUses: typeof data.maxUses === "number" ? data.maxUses : null,
               disabledAt: data.disabledAt ?? null,
             } satisfies Invite;
           })
@@ -424,7 +433,6 @@ export async function assignTeam(
 
   await updateDoc(memberRef, {
     teamId,
-    updatedAt: serverTimestamp(),
   });
 }
 
@@ -437,9 +445,6 @@ export async function createInvite(input: CreateInviteInput, createdBy: string) 
       code: createInviteCode(),
       createdBy,
       teamId: input.teamId,
-      maxUses: input.maxUses,
-      usedCount: 0,
-      expiresAt: null,
       createdAt: serverTimestamp(),
       disabledAt: null,
     },
@@ -468,10 +473,6 @@ export async function joinChallenge(user: User, code: string) {
     throw new Error("This invite has been disabled.");
   }
   
-  if (inviteData.maxUses && inviteData.usedCount >= inviteData.maxUses) {
-    throw new Error("This invite has reached its maximum use limit.");
-  }
-  
   // Check if already a member
   const memberRef = doc(firestore, "competitions", competitionId, "members", user.uid);
   const memberSnapshot = await getDoc(memberRef);
@@ -482,7 +483,7 @@ export async function joinChallenge(user: User, code: string) {
   
   const batch = writeBatch(firestore);
   const now = serverTimestamp();
-  
+
   batch.set(memberRef, {
     userId: user.uid,
     displayNameSnapshot: user.displayName ?? user.email ?? "Participant",
@@ -493,12 +494,7 @@ export async function joinChallenge(user: User, code: string) {
     joinedAt: now,
     invitedBy: inviteData.createdBy,
   });
-  
-  batch.update(inviteDoc.ref, {
-    usedCount: (inviteData.usedCount || 0) + 1,
-    updatedAt: now,
-  });
-  
+
   await batch.commit();
   
   return competitionId;

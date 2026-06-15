@@ -134,7 +134,7 @@ The current activity log rule allows clients to submit `calculatedPoints` and re
 For the first secure version, invite acceptance should be handled by one of these approaches:
 
 - Admin-managed enrollment: an admin creates the member record after inviting a participant.
-- Cloud Function enrollment: the participant submits an invite code to a callable function, and the function validates the invite, creates the member document, increments invite usage, and optionally assigns a team.
+- Cloud Function enrollment: the participant submits an invite code to a callable function, and the function validates the invite, creates the member document, and optionally assigns a team.
 
 Avoid allowing any signed-in user to create their own member document directly from the client. If a competition ID or invite document ID leaks, that would allow unauthorized enrollment.
 

@@ -176,7 +176,6 @@ export function ChallengeAdmin({
     const form = event.currentTarget;
     const formData = new FormData(form);
     const teamIdValue = String(formData.get("inviteTeamId") ?? "");
-    const maxUsesValue = String(formData.get("maxUses") ?? "").trim();
 
     setError(null);
     setIsSaving(true);
@@ -186,7 +185,6 @@ export function ChallengeAdmin({
         {
           competitionId: selectedChallenge.id,
           teamId: teamIdValue || null,
-          maxUses: maxUsesValue ? Number(maxUsesValue) : null,
         },
         user.uid,
       );
@@ -544,15 +542,6 @@ function InvitePanel({
             ))}
           </select>
         </label>
-        <label>
-          <span>Max uses</span>
-          <input
-            min={1}
-            name="maxUses"
-            placeholder="No limit"
-            type="number"
-          />
-        </label>
         <button
           className="button-primary"
           disabled={isSaving}
@@ -585,7 +574,7 @@ function InvitePanel({
               </button>
             </div>
             <p className="mt-3 text-[10px] font-extrabold text-muted uppercase tracking-wide">
-              {invite.usedCount}/{invite.maxUses ?? "∞"} Uses · {getTeamName(teams, invite.teamId)}
+              {getTeamName(teams, invite.teamId)}
             </p>
           </div>
         ))}
