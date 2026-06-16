@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createInvite, deleteChallenge, joinChallenge, removeParticipant } from "@/lib/challenges";
+import {
+  createActivityLog,
+  createInvite,
+  deleteActivityRule,
+  deleteChallenge,
+  joinChallenge,
+  removeParticipant,
+} from "@/lib/challenges";
 
 const mocks = vi.hoisted(() => ({
   addDoc: vi.fn(),
@@ -7,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   arrayUnion: vi.fn(),
   collection: vi.fn(),
   collectionGroup: vi.fn(),
+  deleteDoc: vi.fn(),
   doc: vi.fn(),
   getDoc: vi.fn(),
   getDocs: vi.fn(),
@@ -15,6 +23,9 @@ const mocks = vi.hoisted(() => ({
   updateDoc: vi.fn(),
   where: vi.fn(),
   writeBatch: vi.fn(),
+  Timestamp: {
+    fromDate: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -27,6 +38,7 @@ vi.mock("firebase/firestore", () => ({
   arrayUnion: mocks.arrayUnion,
   collection: mocks.collection,
   collectionGroup: mocks.collectionGroup,
+  deleteDoc: mocks.deleteDoc,
   doc: mocks.doc,
   getDoc: mocks.getDoc,
   getDocs: mocks.getDocs,
@@ -35,6 +47,7 @@ vi.mock("firebase/firestore", () => ({
   updateDoc: mocks.updateDoc,
   where: mocks.where,
   writeBatch: mocks.writeBatch,
+  Timestamp: mocks.Timestamp,
 }));
 
 describe("joinChallenge", () => {
@@ -53,7 +66,9 @@ describe("joinChallenge", () => {
     mocks.query.mockReturnValue("invite-query");
     mocks.serverTimestamp.mockReturnValue("ts");
     mocks.doc.mockReturnValue("member-ref");
+    mocks.deleteDoc.mockResolvedValue(undefined);
     mocks.updateDoc.mockResolvedValue(undefined);
+    mocks.Timestamp.fromDate.mockReturnValue("activity-date");
   });
 
   it("creates reusable invites without usage limit fields", async () => {
@@ -96,6 +111,59 @@ describe("joinChallenge", () => {
       status: "archived",
       updatedAt: "ts",
     });
+  });
+
+  it("deletes an activity rule document", async () => {
+    await deleteActivityRule("competition-1", "rule-1");
+
+    expect(mocks.doc).toHaveBeenCalledWith(
+      {},
+      "competitions",
+      "competition-1",
+      "activityRules",
+      "rule-1",
+    );
+    expect(mocks.deleteDoc).toHaveBeenCalledWith("member-ref");
+  });
+
+  it("creates a fixed-point activity log for the signed-in member", async () => {
+    await createActivityLog({
+      competitionId: "competition-1",
+      userId: "user-1",
+      teamId: "team-1",
+      activityDate: "2026-06-10",
+      activityRule: {
+        id: "rule-1",
+        name: "Running",
+        category: "running",
+        enabled: true,
+        requiresProof: false,
+        scoring: { type: "fixed", points: 5 },
+      },
+    });
+
+    expect(mocks.collection).toHaveBeenCalledWith(
+      {},
+      "competitions",
+      "competition-1",
+      "activityLogs",
+    );
+    expect(mocks.Timestamp.fromDate).toHaveBeenCalledWith(
+      new Date("2026-06-10T12:00:00"),
+    );
+    expect(mocks.addDoc).toHaveBeenCalledWith(
+      "invites-collection",
+      expect.objectContaining({
+        userId: "user-1",
+        teamId: "team-1",
+        activityRuleId: "rule-1",
+        activityNameSnapshot: "Running",
+        activityDate: "activity-date",
+        calculatedPoints: 5,
+        finalPoints: 5,
+        status: "accepted",
+      }),
+    );
   });
 
   it("marks a participant removed and removes them from challenge members", async () => {

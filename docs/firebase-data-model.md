@@ -283,6 +283,25 @@ Suggested statuses:
 
 Store snapshots such as `activityNameSnapshot` and `finalPoints` so historical logs remain understandable if activity rules are edited later.
 
+The current UI writes the fixed-point completion subset first:
+
+```json
+{
+  "userId": "userId",
+  "teamId": "teamId",
+  "activityRuleId": "activityRuleId",
+  "activityNameSnapshot": "Normal team training",
+  "activityDate": "timestamp",
+  "calculatedPoints": 10,
+  "finalPoints": 10,
+  "status": "accepted",
+  "createdAt": "serverTimestamp",
+  "updatedAt": "serverTimestamp"
+}
+```
+
+Members add their own activity logs by selecting an enabled competition activity rule and the date they completed it. Team standings are calculated from accepted logs. If a member is unassigned, the log is stored with `teamId: null`; those points remain unassigned until a later adjustment flow exists.
+
 ## Security Rule Intent
 
 - Users can read competitions where they are members.

@@ -5,6 +5,7 @@ import {
   arrayUnion,
   collection,
   collectionGroup,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -68,11 +69,25 @@ export type ActivityRule = {
   };
 };
 
+export type ActivityLog = {
+  id: string;
+  userId: string;
+  teamId: string | null;
+  activityRuleId: string;
+  activityNameSnapshot: string;
+  activityDate: Date | null;
+  calculatedPoints: number;
+  finalPoints: number;
+  status: "accepted";
+  createdAt: Date | null;
+};
+
 export type ChallengeDetail = {
   teams: Team[];
   invites: Invite[];
   activityRules: ActivityRule[];
   members: Member[];
+  activityLogs: ActivityLog[];
 };
 
 export type CreateChallengeInput = {
@@ -102,6 +117,14 @@ export type CreateActivityRuleInput = {
   category: string;
   points: number;
   requiresProof: boolean;
+};
+
+export type CreateActivityLogInput = {
+  competitionId: string;
+  activityRule: ActivityRule;
+  activityDate: string;
+  teamId: string | null;
+  userId: string;
 };
 
 const assertDb = () => {
@@ -258,7 +281,7 @@ export function listenChallengeDetail(
   competitionId: string,
   onData: (detail: ChallengeDetail) => void,
   onError: (error: FirestoreError) => void,
-  options: { includeAdminData?: boolean } = {},
+  options: { currentUserId?: string; includeAdminData?: boolean } = {},
 ): Unsubscribe {
   const firestore = assertDb();
   const includeAdminData = options.includeAdminData ?? true;
@@ -266,9 +289,10 @@ export function listenChallengeDetail(
   let invites: Invite[] = [];
   let activityRules: ActivityRule[] = [];
   let members: Member[] = [];
+  let activityLogs: ActivityLog[] = [];
 
   const emit = () => {
-    onData({ teams, invites, activityRules, members });
+    onData({ teams, invites, activityRules, members, activityLogs });
   };
 
   const unsubscribers: Unsubscribe[] = [
@@ -343,6 +367,38 @@ export function listenChallengeDetail(
     ),
   );
 
+  unsubscribers.push(
+    onSnapshot(
+      collection(firestore, "competitions", competitionId, "activityLogs"),
+      (snapshot) => {
+        activityLogs = snapshot.docs
+          .map((logDoc) => {
+            const data = logDoc.data();
+
+            return {
+              id: logDoc.id,
+              userId: String(data.userId ?? ""),
+              teamId: data.teamId ? String(data.teamId) : null,
+              activityRuleId: String(data.activityRuleId ?? ""),
+              activityNameSnapshot: String(data.activityNameSnapshot ?? ""),
+              activityDate: data.activityDate instanceof Timestamp ? data.activityDate.toDate() : null,
+              calculatedPoints: Number(data.calculatedPoints ?? 0),
+              finalPoints: Number(data.finalPoints ?? 0),
+              status: "accepted",
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null,
+            } satisfies ActivityLog;
+          })
+          .sort((a, b) => {
+            const bTime = b.activityDate?.getTime() ?? 0;
+            const aTime = a.activityDate?.getTime() ?? 0;
+            return bTime - aTime;
+          });
+        emit();
+      },
+      onError,
+    ),
+  );
+
   if (includeAdminData) {
     unsubscribers.push(
       onSnapshot(
@@ -363,6 +419,34 @@ export function listenChallengeDetail(
               } satisfies Member;
             })
             .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
+          emit();
+        },
+        onError,
+      ),
+    );
+  } else if (options.currentUserId) {
+    unsubscribers.push(
+      onSnapshot(
+        doc(firestore, "competitions", competitionId, "members", options.currentUserId),
+        (snapshot) => {
+          if (!snapshot.exists()) {
+            members = [];
+            emit();
+            return;
+          }
+
+          const data = snapshot.data();
+          members = [
+            {
+              userId: snapshot.id,
+              displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
+              emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
+              teamId: data.teamId ? String(data.teamId) : null,
+              role: data.role ?? "participant",
+              status: data.status ?? "active",
+              joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
+            },
+          ];
           emit();
         },
         onError,
@@ -597,6 +681,17 @@ export async function createActivityRule(input: CreateActivityRuleInput) {
   );
 }
 
+export async function deleteActivityRule(
+  competitionId: string,
+  activityRuleId: string,
+) {
+  const firestore = assertDb();
+
+  await deleteDoc(
+    doc(firestore, "competitions", competitionId, "activityRules", activityRuleId),
+  );
+}
+
 export async function setActivityRuleEnabled(
   competitionId: string,
   activityRuleId: string,
@@ -608,6 +703,32 @@ export async function setActivityRuleEnabled(
     doc(firestore, "competitions", competitionId, "activityRules", activityRuleId),
     {
       enabled,
+      updatedAt: serverTimestamp(),
+    },
+  );
+}
+
+export async function createActivityLog(input: CreateActivityLogInput) {
+  const firestore = assertDb();
+  const points = input.activityRule.scoring.points;
+  const activityDate = new Date(`${input.activityDate}T12:00:00`);
+
+  if (Number.isNaN(activityDate.getTime())) {
+    throw new Error("Select a valid activity date.");
+  }
+
+  await addDoc(
+    collection(firestore, "competitions", input.competitionId, "activityLogs"),
+    {
+      userId: input.userId,
+      teamId: input.teamId,
+      activityRuleId: input.activityRule.id,
+      activityNameSnapshot: input.activityRule.name,
+      activityDate: Timestamp.fromDate(activityDate),
+      calculatedPoints: points,
+      finalPoints: points,
+      status: "accepted",
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     },
   );

@@ -23,6 +23,7 @@ service cloud.firestore {
     //   - teams/{teamId}
     //   - invites/{inviteId}
     //   - activityRules/{activityRuleId}
+    //   - activityLogs/{activityLogId}
     //
     // ===============================================================
 
@@ -44,6 +45,10 @@ service cloud.firestore {
 
     function memberPath(competitionId, userId) {
       return /databases/$(database)/documents/competitions/$(competitionId)/members/$(userId);
+    }
+
+    function activityRulePath(competitionId, activityRuleId) {
+      return /databases/$(database)/documents/competitions/$(competitionId)/activityRules/$(activityRuleId);
     }
 
     function isCompetitionAdmin(competitionId) {
@@ -312,6 +317,41 @@ service cloud.firestore {
         data.updatedAt == request.time;
     }
 
+    function validActivityLog(data, competitionId) {
+      return data.keys().hasOnly([
+          "userId",
+          "teamId",
+          "activityRuleId",
+          "activityNameSnapshot",
+          "activityDate",
+          "calculatedPoints",
+          "finalPoints",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.userId == request.auth.uid &&
+        validNullableString(data.teamId, 128) &&
+        validString(data.activityRuleId, 1, 128) &&
+        validString(data.activityNameSnapshot, 2, 80) &&
+        data.activityDate is timestamp &&
+        data.activityDate <= request.time &&
+        data.calculatedPoints is int &&
+        data.finalPoints is int &&
+        data.calculatedPoints >= 1 &&
+        data.calculatedPoints <= 50 &&
+        data.finalPoints == data.calculatedPoints &&
+        data.status == "accepted" &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time &&
+        exists(activityRulePath(competitionId, data.activityRuleId)) &&
+        get(activityRulePath(competitionId, data.activityRuleId)).data.enabled == true &&
+        get(activityRulePath(competitionId, data.activityRuleId)).data.name == data.activityNameSnapshot &&
+        get(activityRulePath(competitionId, data.activityRuleId)).data.scoring.type == "fixed" &&
+        get(activityRulePath(competitionId, data.activityRuleId)).data.scoring.points == data.calculatedPoints &&
+        get(memberPath(competitionId, request.auth.uid)).data.teamId == data.teamId;
+    }
+
     match /competitions/{competitionId} {
       allow read: if canReadCompetitionData(resource.data) ||
         canReadCompetition(competitionId);
@@ -367,7 +407,14 @@ service cloud.firestore {
           validActivityRuleCreate(request.resource.data);
         allow update: if isCompetitionAdmin(competitionId) &&
           validActivityRuleUpdate(request.resource.data);
-        allow delete: if false;
+        allow delete: if isCompetitionAdmin(competitionId);
+      }
+
+      match /activityLogs/{activityLogId} {
+        allow read: if canReadCompetition(competitionId);
+        allow create: if isCompetitionMember(competitionId) &&
+          validActivityLog(request.resource.data, competitionId);
+        allow update, delete: if false;
       }
     }
 

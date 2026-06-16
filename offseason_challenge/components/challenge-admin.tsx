@@ -4,10 +4,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
 import {
   assignTeam,
+  createActivityLog,
   createActivityRule,
   createChallenge,
   createInvite,
   createTeam,
+  deleteActivityRule,
   deleteChallenge,
   listenChallenge,
   listenChallengeDetail,
@@ -17,6 +19,7 @@ import {
   type ActivityRule,
   type Challenge,
   type ChallengeDetail,
+  type ActivityLog,
   type Member,
   type Team,
 } from "@/lib/challenges";
@@ -36,6 +39,7 @@ const emptyDetail: ChallengeDetail = {
   invites: [],
   activityRules: [],
   members: [],
+  activityLogs: [],
 };
 
 export function ChallengeAdmin({ 
@@ -53,6 +57,7 @@ export function ChallengeAdmin({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [activePane, setActivePane] = useState<"challenge" | "admin">("challenge");
 
   // Fetch only the selected challenge document
   useEffect(() => {
@@ -80,11 +85,12 @@ export function ChallengeAdmin({
       selectedChallengeId,
       setDetail,
       (listenError) => setError(listenError.message),
-      { includeAdminData: canReadAdminDetail },
+      { currentUserId: user.uid, includeAdminData: canReadAdminDetail },
     );
   }, [selectedChallenge, selectedChallengeId, user.uid]);
 
   const isAdmin = selectedChallenge?.adminIds.includes(user.uid);
+  const currentMember = detail.members.find((member) => member.userId === user.uid);
 
   const handleCreateChallenge = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -284,6 +290,71 @@ export function ChallengeAdmin({
     }
   };
 
+  const handleDeleteActivity = async (activityRule: ActivityRule) => {
+    if (!selectedChallenge) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove "${activityRule.name}" from this challenge?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await deleteActivityRule(selectedChallenge.id, activityRule.id);
+    } catch (deleteError) {
+      setError(getMessage(deleteError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateActivityLog = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedChallenge) {
+      return;
+    }
+
+    if (!currentMember || currentMember.status !== "active") {
+      setError("You must be an active challenge member to add activity.");
+      return;
+    }
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const activityRuleId = String(formData.get("activityRuleId") ?? "");
+    const activityDate = String(formData.get("activityDate") ?? "");
+    const activityRule = detail.activityRules.find((rule) => rule.id === activityRuleId);
+
+    if (!activityRule || !activityRule.enabled || !activityDate) {
+      setError("Select an active activity and date.");
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await createActivityLog({
+        competitionId: selectedChallenge.id,
+        activityRule,
+        activityDate,
+        teamId: currentMember.teamId,
+        userId: user.uid,
+      });
+      form.reset();
+    } catch (createError) {
+      setError(getMessage(createError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleAssignTeam = async (userId: string, teamId: string | null) => {
     if (!selectedChallenge) return;
     try {
@@ -334,7 +405,10 @@ export function ChallengeAdmin({
             </p>
             {isAdmin && selectedChallenge && (
               <button 
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => {
+                  setActivePane("admin");
+                  setIsEditing(!isEditing);
+                }}
                 className="text-xs font-black uppercase tracking-widest text-brand hover:underline"
               >
                 {isEditing ? "Cancel" : "Edit Details"}
@@ -348,16 +422,6 @@ export function ChallengeAdmin({
             <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Teams" value={String(detail.teams.length)} />
-            {isAdmin ? (
-              <button
-                className="button-secondary border-danger/30 text-danger hover:bg-danger/10"
-                disabled={isSaving}
-                onClick={handleDeleteChallenge}
-                type="button"
-              >
-                Delete
-              </button>
-            ) : null}
           </div>
         )}
       </header>
@@ -467,46 +531,197 @@ export function ChallengeAdmin({
         </div>
       ) : isAdmin ? (
         <div className="flex flex-col gap-6">
-          <ChallengeOverview teams={detail.teams} members={detail.members} />
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            <TeamPanel
+          <PaneTabs activePane={activePane} onChange={setActivePane} />
+          {activePane === "challenge" ? (
+            <ChallengePane
+              activityLogs={detail.activityLogs}
+              activityRules={detail.activityRules}
+              currentMember={currentMember}
               isSaving={isSaving}
-              onCreateTeam={handleCreateTeam}
+              members={detail.members}
+              onCreateActivityLog={handleCreateActivityLog}
               teams={detail.teams}
             />
-            <InvitePanel
+          ) : (
+            <AdminPane
+              activityRules={detail.activityRules}
               invites={detail.invites}
               isSaving={isSaving}
-              onCreateInvite={handleCreateInvite}
-            />
-            <ActivityPanel
-              activityRules={detail.activityRules}
-              isSaving={isSaving}
+              members={detail.members}
+              onAssignTeam={handleAssignTeam}
               onCreateActivity={handleCreateActivity}
+              onCreateInvite={handleCreateInvite}
+              onCreateTeam={handleCreateTeam}
+              onDeleteActivity={handleDeleteActivity}
+              onDeleteChallenge={handleDeleteChallenge}
+              onRemoveParticipant={handleRemoveParticipant}
               onToggleActivity={handleToggleActivity}
+              teams={detail.teams}
             />
-          </div>
-          
-          <MemberPanel 
-            isSaving={isSaving}
-            members={detail.members} 
-            onAssignTeam={handleAssignTeam} 
-            onRemoveParticipant={handleRemoveParticipant}
-            teams={detail.teams} 
-          />
+          )}
         </div>
       ) : selectedChallenge ? (
-        <ChallengeOverview teams={detail.teams} members={detail.members} />
+        <ChallengePane
+          activityLogs={detail.activityLogs}
+          activityRules={detail.activityRules}
+          currentMember={currentMember}
+          isSaving={isSaving}
+          members={detail.members}
+          onCreateActivityLog={handleCreateActivityLog}
+          teams={detail.teams}
+        />
       ) : null}
     </div>
   );
 }
 
+function PaneTabs({
+  activePane,
+  onChange,
+}: {
+  activePane: "challenge" | "admin";
+  onChange: (pane: "challenge" | "admin") => void;
+}) {
+  return (
+    <div className="flex rounded-xl border border-line bg-surface-soft p-1">
+      {(["challenge", "admin"] as const).map((pane) => (
+        <button
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-black uppercase tracking-widest transition ${
+            activePane === pane
+              ? "bg-white text-brand-strong shadow-sm"
+              : "text-muted hover:text-brand-strong"
+          }`}
+          key={pane}
+          onClick={() => onChange(pane)}
+          type="button"
+        >
+          {pane === "challenge" ? "Challenge" : "Admin"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ChallengePane({
+  activityLogs,
+  activityRules,
+  currentMember,
+  isSaving,
+  members,
+  onCreateActivityLog,
+  teams,
+}: {
+  activityLogs: ActivityLog[];
+  activityRules: ActivityRule[];
+  currentMember: Member | undefined;
+  isSaving: boolean;
+  members: Member[];
+  onCreateActivityLog: (event: FormEvent<HTMLFormElement>) => void;
+  teams: Team[];
+}) {
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <ChallengeOverview
+        activityLogs={activityLogs}
+        members={members}
+        teams={teams}
+      />
+      <div className="flex flex-col gap-6">
+        <ActivitySubmissionPanel
+          activityRules={activityRules}
+          currentMember={currentMember}
+          isSaving={isSaving}
+          onCreateActivityLog={onCreateActivityLog}
+        />
+        <ActivityFeedPanel activityLogs={activityLogs} />
+      </div>
+    </div>
+  );
+}
+
+function AdminPane({
+  activityRules,
+  invites,
+  isSaving,
+  members,
+  onAssignTeam,
+  onCreateActivity,
+  onCreateInvite,
+  onCreateTeam,
+  onDeleteActivity,
+  onDeleteChallenge,
+  onRemoveParticipant,
+  onToggleActivity,
+  teams,
+}: {
+  activityRules: ActivityRule[];
+  invites: ChallengeDetail["invites"];
+  isSaving: boolean;
+  members: Member[];
+  onAssignTeam: (userId: string, teamId: string | null) => void;
+  onCreateActivity: (event: FormEvent<HTMLFormElement>) => void;
+  onCreateInvite: (event: FormEvent<HTMLFormElement>) => void;
+  onCreateTeam: (event: FormEvent<HTMLFormElement>) => void;
+  onDeleteActivity: (activityRule: ActivityRule) => void;
+  onDeleteChallenge: () => void;
+  onRemoveParticipant: (member: Member) => void;
+  onToggleActivity: (activityRule: ActivityRule) => void;
+  teams: Team[];
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <TeamPanel
+          isSaving={isSaving}
+          onCreateTeam={onCreateTeam}
+          teams={teams}
+        />
+        <InvitePanel
+          invites={invites}
+          isSaving={isSaving}
+          onCreateInvite={onCreateInvite}
+        />
+        <ActivityPanel
+          activityRules={activityRules}
+          isSaving={isSaving}
+          onCreateActivity={onCreateActivity}
+          onDeleteActivity={onDeleteActivity}
+          onToggleActivity={onToggleActivity}
+        />
+      </div>
+
+      <MemberPanel
+        isSaving={isSaving}
+        members={members}
+        onAssignTeam={onAssignTeam}
+        onRemoveParticipant={onRemoveParticipant}
+        teams={teams}
+      />
+
+      <section className="panel flex flex-col gap-3 border-danger/20">
+        <h2 className="text-lg font-bold uppercase tracking-wider text-danger">Danger zone</h2>
+        <p className="text-sm font-medium text-muted">
+          Archive this challenge and remove it from challenge lists.
+        </p>
+        <button
+          className="button-secondary w-fit border-danger/30 text-danger hover:bg-danger/10"
+          disabled={isSaving}
+          onClick={onDeleteChallenge}
+          type="button"
+        >
+          Delete challenge
+        </button>
+      </section>
+    </div>
+  );
+}
+
 function ChallengeOverview({
+  activityLogs,
   teams,
   members,
 }: {
+  activityLogs: ActivityLog[];
   teams: Team[];
   members: Member[];
 }) {
@@ -514,13 +729,19 @@ function ChallengeOverview({
   const unassignedMembers = activeMembers.filter((member) => !member.teamId);
   const teamRows = teams.map((team) => {
     const teamMembers = activeMembers.filter((member) => member.teamId === team.id);
+    const points = activityLogs
+      .filter((activityLog) => activityLog.status === "accepted" && activityLog.teamId === team.id)
+      .reduce((total, activityLog) => total + activityLog.finalPoints, 0);
 
     return {
       ...team,
       memberCount: teamMembers.length,
-      points: 0,
+      points,
     };
-  });
+  }).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+  const unassignedPoints = activityLogs
+    .filter((activityLog) => activityLog.status === "accepted" && !activityLog.teamId)
+    .reduce((total, activityLog) => total + activityLog.finalPoints, 0);
   const highestPoints = Math.max(1, ...teamRows.map((team) => team.points));
 
   return (
@@ -589,6 +810,111 @@ function ChallengeOverview({
           </p>
         </div>
       ) : null}
+
+      {unassignedPoints > 0 ? (
+        <div className="rounded-lg border border-line bg-white p-4">
+          <p className="text-xs font-black uppercase tracking-widest text-muted">
+            Unassigned points
+          </p>
+          <p className="mt-1 text-sm font-medium text-brand-strong">
+            {unassignedPoints} points were logged before members received a team.
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ActivitySubmissionPanel({
+  activityRules,
+  currentMember,
+  isSaving,
+  onCreateActivityLog,
+}: {
+  activityRules: ActivityRule[];
+  currentMember: Member | undefined;
+  isSaving: boolean;
+  onCreateActivityLog: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const enabledRules = activityRules.filter((activityRule) => activityRule.enabled);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <section className="panel flex flex-col gap-4">
+      <div>
+        <p className="eyebrow">Your Activity</p>
+        <h2 className="text-xl font-bold text-brand-strong">Add completed activity</h2>
+      </div>
+      {!currentMember || currentMember.status !== "active" ? (
+        <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
+          You need to be an active member before logging activity.
+        </p>
+      ) : enabledRules.length === 0 ? (
+        <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
+          No active activities are available yet.
+        </p>
+      ) : (
+        <form className="grid gap-4" onSubmit={onCreateActivityLog}>
+          <label>
+            <span>Activity</span>
+            <select name="activityRuleId" required>
+              <option value="">Select activity</option>
+              {enabledRules.map((activityRule) => (
+                <option key={activityRule.id} value={activityRule.id}>
+                  {activityRule.name} · {activityRule.scoring.points} pts
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Date completed</span>
+            <input defaultValue={today} max={today} name="activityDate" required type="date" />
+          </label>
+          <button className="button-primary" disabled={isSaving} type="submit">
+            Add activity
+          </button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
+  const recentLogs = activityLogs.slice(0, 8);
+
+  return (
+    <section className="panel flex flex-col gap-4">
+      <h2 className="text-lg font-bold uppercase tracking-wider text-brand-strong">
+        Recent activity
+      </h2>
+      {recentLogs.length === 0 ? (
+        <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
+          No activity has been logged yet.
+        </p>
+      ) : (
+        <div className="grid gap-2">
+          {recentLogs.map((activityLog) => (
+            <div
+              className="rounded-lg border border-line bg-surface-soft/30 p-3"
+              key={activityLog.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-brand-strong">
+                    {activityLog.activityNameSnapshot}
+                  </p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                    {activityLog.activityDate?.toLocaleDateString() ?? "No date"}
+                  </p>
+                </div>
+                <strong className="text-lg font-black text-brand-strong">
+                  {activityLog.finalPoints}
+                </strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -800,11 +1126,13 @@ function ActivityPanel({
   activityRules,
   isSaving,
   onCreateActivity,
+  onDeleteActivity,
   onToggleActivity,
 }: {
   activityRules: ActivityRule[];
   isSaving: boolean;
   onCreateActivity: (event: FormEvent<HTMLFormElement>) => void;
+  onDeleteActivity: (activityRule: ActivityRule) => void;
   onToggleActivity: (activityRule: ActivityRule) => void;
 }) {
   return (
@@ -869,17 +1197,27 @@ function ActivityPanel({
                   {activityRule.category} · {activityRule.scoring.points} pts
                 </p>
               </div>
-              <button
-                className={`rounded-lg px-3 py-1 text-[11px] font-black uppercase tracking-widest transition ${
-                  activityRule.enabled
-                    ? "bg-ok/10 text-ok border border-ok/20"
-                    : "bg-muted/10 text-muted border border-muted/20"
-                }`}
-                onClick={() => onToggleActivity(activityRule)}
-                type="button"
-              >
-                {activityRule.enabled ? "Active" : "Paused"}
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  className={`rounded-lg px-3 py-1 text-[11px] font-black uppercase tracking-widest transition ${
+                    activityRule.enabled
+                      ? "bg-ok/10 text-ok border border-ok/20"
+                      : "bg-muted/10 text-muted border border-muted/20"
+                  }`}
+                  onClick={() => onToggleActivity(activityRule)}
+                  type="button"
+                >
+                  {activityRule.enabled ? "Active" : "Paused"}
+                </button>
+                <button
+                  className="rounded-lg border border-danger/30 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSaving}
+                  onClick={() => onDeleteActivity(activityRule)}
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
             {activityRule.requiresProof ? (
               <p className="mt-2 text-[10px] font-black uppercase tracking-tighter text-accent">Proof required</p>
