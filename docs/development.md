@@ -7,14 +7,23 @@
 - Hosting: Firebase Hosting serves `offseason_challenge/out`.
 - Auth: Firebase Authentication with Google and email/password sign-in.
 - Data: Cloud Firestore Standard / native mode, `(default)` database, location `nam5`.
-- Current signed-in product surface: mobile-first challenge admin workflow.
+- Current signed-in product surface: mobile-first challenge dashboard with separate Challenge and Admin panes.
+- Current challenge member capabilities:
+  - join through a reusable invite link
+  - choose a challenge display name while joining
+  - see team standings
+  - add completed fixed-point activities with a completion date
+  - see recent activity
 - Current admin capabilities:
   - create a challenge
   - become the initial admin of that challenge
   - add teams
-  - generate invite codes
+  - generate one reusable invite link
   - create fixed-point activity rules
-  - enable or disable activity rules
+  - enable, disable, or remove activity rules
+  - assign members to teams
+  - remove participants
+  - archive challenges
 
 ## Local Commands
 
@@ -53,9 +62,9 @@ Firebase Hosting is configured with a `predeploy` hook that runs the same check 
 ## Current Test Coverage
 
 - `offseason_challenge/components/challenge-admin.test.tsx`
-  - Covers the team creation form.
-  - Verifies the team write payload.
-  - Verifies the async submit handler resets the form without the previous `currentTarget` null regression.
+  - Covers team creation, challenge archive, member standings, participant removal, activity rule removal, and member activity submission.
+- `offseason_challenge/lib/challenges.join.test.ts`
+  - Covers reusable invite creation, challenge archive, participant removal, invite joins, activity rule deletion, and activity log writes.
 
 ## Deployment Notes
 

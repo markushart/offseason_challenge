@@ -7,7 +7,9 @@
 - `rules.pdf` exists and has been reviewed.
 - A Next.js React application exists under `offseason_challenge/`.
 - Firebase Hosting is configured to serve the static Next export from `offseason_challenge/out`.
-- The first signed-in page is a challenge admin workflow for creating challenges, teams, invites, and fixed-point activity rules.
+- The signed-in product surface has separate Challenge and Admin panes for each selected challenge.
+- The Challenge pane shows standings, recent activity, and member activity submission from enabled fixed-point rules.
+- The Admin pane manages challenge teams, one reusable invite link, fixed-point activity rules, participant team assignment, participant removal, and challenge archiving.
 - Signed-in users can switch between joined challenges from a dashboard sidebar/mobile selector.
 - Invite links with `?join=CODE` are supported and can auto-join a signed-in user to a challenge.
 - Frontend design should be mobile-first because the app will mostly be used on phones.
@@ -36,6 +38,12 @@
 - Added admin team assignment for challenge members.
 - Added participant-chosen display names during invite join.
 - Added admin participant removal and hid participant email addresses from the member list.
+- Added separate Challenge/Admin panes.
+- Added member activity submission with completion dates.
+- Added recent activity feed and standings from accepted activity logs.
+- Added admin removal of activity rules.
+- Updated standings to calculate team points from each active member's current team assignment, so points follow a participant after team assignment.
+- Added mobile layout refinements for challenge date metrics, admin panels, and long activity lists.
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.
 - Updated Firebase Hosting workflows to run lint, tests, and build before deploy.
@@ -45,7 +53,7 @@
 
 ## In Progress
 
-- Challenge admin workflow iteration.
+- Challenge/admin workflow iteration.
 - Mobile-first interface refinement.
 - Test coverage expansion.
 
@@ -55,16 +63,14 @@
 - Production-reviewed Firestore Security Rules.
 - Activity rule seed data.
 - Team editing and removal workflows.
-- Activity submission UI.
-- Standings.
-- Broader tests for invite, activity, auth, and Firestore permission-sensitive flows.
+- Broader tests for auth and Firestore permission-sensitive flows.
 
 ## Notes
 
 - The current scoring rules are based on the PDF created on 2026-05-19.
 - Firestore exists as the `(default)` database in Standard / native mode in location `nam5`.
 - Current Firestore rules are prototype rules and should be reviewed before broad app sharing.
-- Current activity management supports fixed-point custom activities only. Threshold, choice, manual range, and bonus rule editing are still future work.
+- Current activity management and submission support fixed-point custom activities only. Threshold, choice, manual range, and bonus rule editing are still future work.
 - Current invite join flow runs from the client using Firestore queries and writes; callable-function hardening is still future work.
 - Firebase JSON config has been validated with `jq`.
 - Firebase Emulator Suite validation has not run yet because `java` is not installed or not available on `PATH`.

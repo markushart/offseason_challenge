@@ -70,7 +70,7 @@ Suggested statuses:
 }
 ```
 
-Team score can be calculated from accepted logs. A cached score may be added later if standings queries become expensive.
+Team score is currently calculated in the UI as the sum of accepted logs for active members assigned to that team. Points follow a member's current `teamId`; a cached score or immutable team snapshot may be added later if standings queries become expensive or historical team attribution becomes required.
 
 ## `competitions/{competitionId}/members/{userId}`
 
@@ -300,7 +300,7 @@ The current UI writes the fixed-point completion subset first:
 }
 ```
 
-Members add their own activity logs by selecting an enabled competition activity rule and the date they completed it. Team standings are calculated from accepted logs. If a member is unassigned, the log is stored with `teamId: null`; those points remain unassigned until a later adjustment flow exists.
+Members add their own activity logs by selecting an enabled competition activity rule and the date they completed it. The log stores the member's `teamId` at submission time for audit context, but current standings intentionally sum points by the member's current team assignment. If a member logs activity while unassigned and is assigned to a team later, those points count for the new team immediately.
 
 ## Security Rule Intent
 

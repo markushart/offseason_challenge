@@ -153,7 +153,7 @@ describe("ChallengeAdmin", () => {
     expect(onChallengeDeleted).toHaveBeenCalledTimes(1);
   });
 
-  it("shows team progress to challenge members", async () => {
+  it("shows team progress from each member's current team assignment", async () => {
     mocks.listenChallenge.mockImplementation((_id, onData) => {
       onData({
         id: "challenge-1",
@@ -200,7 +200,7 @@ describe("ChallengeAdmin", () => {
           {
             id: "log-1",
             userId: "user-1",
-            teamId: "team-blue",
+            teamId: null,
             activityRuleId: "rule-1",
             activityNameSnapshot: "Running",
             activityDate: new Date("2026-06-05"),
@@ -228,6 +228,7 @@ describe("ChallengeAdmin", () => {
     expect(screen.getByText("Team Red")).toBeInTheDocument();
     expect(screen.getAllByText("5").length).toBeGreaterThan(0);
     expect(screen.getByText("1 active member is waiting for a team.")).toBeInTheDocument();
+    expect(screen.queryByText(/points were logged before members received a team/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Participant view coming soon. You are currently a member of this team.")).not.toBeInTheDocument();
   });
 

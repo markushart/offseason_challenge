@@ -418,7 +418,7 @@ export function ChallengeAdmin({
         </div>
 
         {selectedChallenge && !isEditing && (
-          <div className="flex gap-3 overflow-x-auto pb-2 sm:pb-0">
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 lg:flex">
             <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Teams" value={String(detail.teams.length)} />
@@ -727,10 +727,17 @@ function ChallengeOverview({
 }) {
   const activeMembers = members.filter((member) => member.status === "active");
   const unassignedMembers = activeMembers.filter((member) => !member.teamId);
+  const activeMemberTeamByUserId = new Map(
+    activeMembers.map((member) => [member.userId, member.teamId]),
+  );
   const teamRows = teams.map((team) => {
     const teamMembers = activeMembers.filter((member) => member.teamId === team.id);
     const points = activityLogs
-      .filter((activityLog) => activityLog.status === "accepted" && activityLog.teamId === team.id)
+      .filter(
+        (activityLog) =>
+          activityLog.status === "accepted" &&
+          activeMemberTeamByUserId.get(activityLog.userId) === team.id,
+      )
       .reduce((total, activityLog) => total + activityLog.finalPoints, 0);
 
     return {
@@ -740,7 +747,12 @@ function ChallengeOverview({
     };
   }).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
   const unassignedPoints = activityLogs
-    .filter((activityLog) => activityLog.status === "accepted" && !activityLog.teamId)
+    .filter(
+      (activityLog) =>
+        activityLog.status === "accepted" &&
+        activeMemberTeamByUserId.has(activityLog.userId) &&
+        !activeMemberTeamByUserId.get(activityLog.userId),
+    )
     .reduce((total, activityLog) => total + activityLog.finalPoints, 0);
   const highestPoints = Math.max(1, ...teamRows.map((team) => team.points));
 
@@ -751,7 +763,7 @@ function ChallengeOverview({
           <p className="eyebrow">Team Progress</p>
           <h2 className="text-2xl font-bold text-brand-strong">Standings</h2>
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
           <Metric label="Teams" value={String(teams.length)} />
           <Metric label="Members" value={String(activeMembers.length)} />
         </div>
@@ -929,8 +941,8 @@ function TeamPanel({
   onCreateTeam: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <section className="panel flex flex-col gap-4">
-      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Teams</h2>
+    <section className="panel flex min-w-0 flex-col gap-4">
+      <h2 className="break-words text-lg font-bold uppercase tracking-wider text-brand-strong">Teams</h2>
       <form className="grid gap-4" onSubmit={onCreateTeam}>
         <label>
           <span>Team name</span>
@@ -969,15 +981,15 @@ function TeamPanel({
         ) : null}
         {teams.map((team) => (
           <div
-            className="flex items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4"
+            className="flex min-w-0 items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4"
             key={team.id}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <span
-                className="h-4 w-4 rounded-full shadow-sm"
+                className="h-4 w-4 flex-shrink-0 rounded-full shadow-sm"
                 style={{ backgroundColor: team.color }}
               />
-              <span className="font-bold text-brand-strong">{team.name}</span>
+              <span className="min-w-0 truncate font-bold text-brand-strong">{team.name}</span>
             </div>
           </div>
         ))}
@@ -1006,14 +1018,14 @@ function InvitePanel({
   };
 
   return (
-    <section className="panel flex flex-col gap-4">
+    <section className="panel flex min-w-0 flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Invites</h2>
       {invite ? (
         <div className="rounded-lg border border-line bg-surface-soft/30 p-4">
           <p className="text-xs font-black uppercase tracking-widest text-muted">
             Challenge link
           </p>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <code className="truncate rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
               {invite.code}
             </code>
@@ -1063,7 +1075,7 @@ function MemberPanel({
   const activeMembers = members.filter((member) => member.status === "active");
 
   return (
-    <section className="panel flex flex-col gap-4">
+    <section className="panel flex min-w-0 flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Members</h2>
       <div className="grid gap-2">
         {activeMembers.length === 0 ? (
@@ -1136,7 +1148,7 @@ function ActivityPanel({
   onToggleActivity: (activityRule: ActivityRule) => void;
 }) {
   return (
-    <section className="panel flex flex-col gap-4">
+    <section className="panel flex min-w-0 flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Activities</h2>
       <form className="grid gap-4" onSubmit={onCreateActivity}>
         <label>
@@ -1179,7 +1191,7 @@ function ActivityPanel({
         </button>
       </form>
 
-      <div className="mt-2 flex flex-col gap-2">
+      <div className="mt-2 flex max-h-[520px] flex-col gap-2 overflow-y-auto pr-1">
         {activityRules.length === 0 ? (
           <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
             No activities yet.
@@ -1190,7 +1202,7 @@ function ActivityPanel({
             className="rounded-lg border border-line bg-surface-soft/30 p-4"
             key={activityRule.id}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="font-bold text-brand-strong truncate">{activityRule.name}</p>
                 <p className="mt-1 text-xs font-extrabold text-muted uppercase tracking-wider">
@@ -1231,9 +1243,9 @@ function ActivityPanel({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="stat-tile min-w-[120px]">
+    <div className="stat-tile min-w-0">
       <span>{label}</span>
-      <strong className="text-brand-strong uppercase">{value}</strong>
+      <strong className="break-words text-brand-strong uppercase">{value}</strong>
     </div>
   );
 }
