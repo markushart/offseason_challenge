@@ -260,8 +260,10 @@ export function listenChallengeDetail(
   competitionId: string,
   onData: (detail: ChallengeDetail) => void,
   onError: (error: FirestoreError) => void,
+  options: { includeAdminData?: boolean } = {},
 ): Unsubscribe {
   const firestore = assertDb();
+  const includeAdminData = options.includeAdminData ?? true;
   let teams: Team[] = [];
   let invites: Invite[] = [];
   let activityRules: ActivityRule[] = [];
@@ -271,7 +273,7 @@ export function listenChallengeDetail(
     onData({ teams, invites, activityRules, members });
   };
 
-  const unsubscribers = [
+  const unsubscribers: Unsubscribe[] = [
     onSnapshot(
       collection(firestore, "competitions", competitionId, "teams"),
       (snapshot) => {
@@ -290,25 +292,33 @@ export function listenChallengeDetail(
       },
       onError,
     ),
-    onSnapshot(
-      collection(firestore, "competitions", competitionId, "invites"),
-      (snapshot) => {
-        invites = snapshot.docs
-          .map((inviteDoc) => {
-            const data = inviteDoc.data();
+  ];
 
-            return {
-              id: inviteDoc.id,
-              code: String(data.code ?? ""),
-              teamId: typeof data.teamId === "string" ? data.teamId : null,
-              disabledAt: data.disabledAt ?? null,
-            } satisfies Invite;
-          })
-          .sort((a, b) => a.code.localeCompare(b.code));
-        emit();
-      },
-      onError,
-    ),
+  if (includeAdminData) {
+    unsubscribers.push(
+      onSnapshot(
+        collection(firestore, "competitions", competitionId, "invites"),
+        (snapshot) => {
+          invites = snapshot.docs
+            .map((inviteDoc) => {
+              const data = inviteDoc.data();
+
+              return {
+                id: inviteDoc.id,
+                code: String(data.code ?? ""),
+                teamId: typeof data.teamId === "string" ? data.teamId : null,
+                disabledAt: data.disabledAt ?? null,
+              } satisfies Invite;
+            })
+            .sort((a, b) => a.code.localeCompare(b.code));
+          emit();
+        },
+        onError,
+      ),
+    );
+  }
+
+  unsubscribers.push(
     onSnapshot(
       collection(firestore, "competitions", competitionId, "activityRules"),
       (snapshot) => {
@@ -334,29 +344,34 @@ export function listenChallengeDetail(
       },
       onError,
     ),
-    onSnapshot(
-      collection(firestore, "competitions", competitionId, "members"),
-      (snapshot) => {
-        members = snapshot.docs
-          .map((memberDoc) => {
-            const data = memberDoc.data();
+  );
 
-            return {
-              userId: memberDoc.id,
-              displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
-              emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
-              teamId: data.teamId ? String(data.teamId) : null,
-              role: data.role ?? "participant",
-              status: data.status ?? "active",
-              joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
-            } satisfies Member;
-          })
-          .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
-        emit();
-      },
-      onError,
-    ),
-  ];
+  if (includeAdminData) {
+    unsubscribers.push(
+      onSnapshot(
+        collection(firestore, "competitions", competitionId, "members"),
+        (snapshot) => {
+          members = snapshot.docs
+            .map((memberDoc) => {
+              const data = memberDoc.data();
+
+              return {
+                userId: memberDoc.id,
+                displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
+                emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
+                teamId: data.teamId ? String(data.teamId) : null,
+                role: data.role ?? "participant",
+                status: data.status ?? "active",
+                joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
+              } satisfies Member;
+            })
+            .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
+          emit();
+        },
+        onError,
+      ),
+    );
+  }
 
   return () => {
     unsubscribers.forEach((unsubscribe) => unsubscribe());

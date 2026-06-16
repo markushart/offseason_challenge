@@ -66,15 +66,23 @@ export function ChallengeAdmin({
 
   useEffect(() => {
     if (!selectedChallengeId) {
+      Promise.resolve().then(() => setDetail(emptyDetail));
       return;
     }
+
+    if (!selectedChallenge) {
+      return;
+    }
+
+    const canReadAdminDetail = selectedChallenge.adminIds.includes(user.uid);
 
     return listenChallengeDetail(
       selectedChallengeId,
       setDetail,
       (listenError) => setError(listenError.message),
+      { includeAdminData: canReadAdminDetail },
     );
-  }, [selectedChallengeId]);
+  }, [selectedChallenge, selectedChallengeId, user.uid]);
 
   const isAdmin = selectedChallenge?.adminIds.includes(user.uid);
 

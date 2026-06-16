@@ -197,7 +197,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   <span>Your name</span>
                   <input
                     autoFocus
-                    defaultValue={user.displayName ?? ""}
                     maxLength={80}
                     name="displayName"
                     placeholder="Name shown in this challenge"
@@ -219,7 +218,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               {joinError}
             </p>
           ) : null}
-          {children({ selectedChallengeId, setSelectedChallengeId })}
+          {pendingJoinCode ? null : children({ selectedChallengeId, setSelectedChallengeId })}
         </main>
       </div>
     </div>
