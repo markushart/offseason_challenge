@@ -32,7 +32,7 @@
 - Added prototype Firestore rules and indexes configuration.
 - Added challenge creation, team creation, invite generation, and fixed-point activity rule management in the web app.
 - Added challenge detail editing (name, description, dates) from the admin UI.
-- Added participant membership join flow using invite codes.
+- Added participant membership join flow using one reusable invite link per challenge.
 - Added admin team assignment for challenge members.
 - Added participant-chosen display names during invite join.
 - Added admin participant removal and hid participant email addresses from the member list.

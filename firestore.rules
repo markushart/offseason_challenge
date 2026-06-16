@@ -246,14 +246,12 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "code",
           "createdBy",
-          "teamId",
           "createdAt",
           "disabledAt"
         ]) &&
         data.code is string &&
         data.code.matches("^[A-Z0-9]{6}$") &&
         data.createdBy is string &&
-        validNullableString(data.teamId, 128) &&
         data.createdAt is timestamp &&
         (data.disabledAt == null || data.disabledAt is timestamp);
     }

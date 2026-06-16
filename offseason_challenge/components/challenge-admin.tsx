@@ -211,10 +211,6 @@ export function ChallengeAdmin({
       return;
     }
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const teamIdValue = String(formData.get("inviteTeamId") ?? "");
-
     setError(null);
     setIsSaving(true);
 
@@ -222,11 +218,9 @@ export function ChallengeAdmin({
       await createInvite(
         {
           competitionId: selectedChallenge.id,
-          teamId: teamIdValue || null,
         },
         user.uid,
       );
-      form.reset();
     } catch (createError) {
       setError(getMessage(createError));
     } finally {
@@ -485,7 +479,6 @@ export function ChallengeAdmin({
               invites={detail.invites}
               isSaving={isSaving}
               onCreateInvite={handleCreateInvite}
-              teams={detail.teams}
             />
             <ActivityPanel
               activityRules={detail.activityRules}
@@ -668,17 +661,16 @@ function TeamPanel({
 }
 
 function InvitePanel({
-  teams,
   invites,
   isSaving,
   onCreateInvite,
 }: {
-  teams: Team[];
   invites: ChallengeDetail["invites"];
   isSaving: boolean;
   onCreateInvite: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const invite = invites[0] ?? null;
 
   const copyLink = (code: string) => {
     const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
@@ -690,18 +682,32 @@ function InvitePanel({
   return (
     <section className="panel flex flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Invites</h2>
-      <form className="grid gap-4" onSubmit={onCreateInvite}>
-        <label>
-          <span>Assign to team (Optional)</span>
-          <select name="inviteTeamId">
-            <option value="">Unassigned (Recommended)</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      {invite ? (
+        <div className="rounded-lg border border-line bg-surface-soft/30 p-4">
+          <p className="text-xs font-black uppercase tracking-widest text-muted">
+            Challenge link
+          </p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <code className="truncate rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
+              {invite.code}
+            </code>
+            <button
+              onClick={() => copyLink(invite.code)}
+              className="text-[10px] font-black uppercase tracking-widest bg-brand text-white px-2 py-1 rounded"
+              type="button"
+            >
+              {copied === invite.code ? "Copied!" : "Copy Link"}
+            </button>
+          </div>
+          <p className="mt-3 text-xs font-medium text-muted">
+            New members join unassigned. Assign teams from the member list.
+          </p>
+        </div>
+      ) : (
+        <form className="grid gap-4" onSubmit={onCreateInvite}>
+          <p className="rounded-lg bg-surface-soft p-3 text-sm font-medium text-muted">
+            Generate one invitation link for this challenge.
+          </p>
         <button
           className="button-primary"
           disabled={isSaving}
@@ -709,36 +715,8 @@ function InvitePanel({
         >
           Generate invite
         </button>
-      </form>
-
-      <div className="mt-2 flex flex-col gap-2">
-        {invites.length === 0 ? (
-          <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
-            No invite codes yet.
-          </p>
-        ) : null}
-        {invites.map((invite) => (
-          <div
-            className="rounded-lg border border-line bg-surface-soft/30 p-4"
-            key={invite.id}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <code className="rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
-                {invite.code}
-              </code>
-              <button 
-                onClick={() => copyLink(invite.code)}
-                className="text-[10px] font-black uppercase tracking-widest bg-brand text-white px-2 py-1 rounded"
-              >
-                {copied === invite.code ? "Copied!" : "Copy Link"}
-              </button>
-            </div>
-            <p className="mt-3 text-[10px] font-extrabold text-muted uppercase tracking-wide">
-              {getTeamName(teams, invite.teamId)}
-            </p>
-          </div>
-        ))}
-      </div>
+        </form>
+      )}
     </section>
   );
 }
@@ -941,12 +919,4 @@ function Notice({
 
 function getMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong.";
-}
-
-function getTeamName(teams: Team[], teamId: string | null) {
-  if (!teamId) {
-    return "Joins without a team assignment";
-  }
-
-  return teams.find((team) => team.id === teamId)?.name ?? "Unknown team";
 }

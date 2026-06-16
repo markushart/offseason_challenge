@@ -29,7 +29,7 @@
 
 ## Phase 3: Invites and Team Assignment
 
-- Generate invite codes or links. Initial invite code generation done.
+- Generate one reusable invite link per competition. Initial invite link generation done.
 - Let participants join a competition through an invite. Initial client-side join flow with participant-chosen display names is done; callable Cloud Function version is pending.
 - Let admins assign participants to teams. Initial assignment flow done.
 - Prevent duplicate active membership for the same competition.

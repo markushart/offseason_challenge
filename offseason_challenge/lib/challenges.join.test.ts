@@ -60,7 +60,6 @@ describe("joinChallenge", () => {
     await createInvite(
       {
         competitionId: "competition-1",
-        teamId: null,
       },
       "admin-1",
     );
@@ -76,6 +75,7 @@ describe("joinChallenge", () => {
       expect.not.objectContaining({
         expiresAt: expect.anything(),
         maxUses: expect.anything(),
+        teamId: expect.anything(),
         usedCount: expect.anything(),
       }),
     );
@@ -84,7 +84,6 @@ describe("joinChallenge", () => {
       expect.objectContaining({
         createdBy: "admin-1",
         disabledAt: null,
-        teamId: null,
       }),
     );
   });
@@ -159,7 +158,7 @@ describe("joinChallenge", () => {
         displayNameSnapshot: "Player One",
         role: "participant",
         status: "active",
-        teamId: "team-1",
+        teamId: null,
         invitedBy: "admin-1",
       }),
     );

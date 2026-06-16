@@ -43,7 +43,6 @@ export type Team = {
 export type Invite = {
   id: string;
   code: string;
-  teamId: string | null;
   disabledAt: unknown | null;
 };
 
@@ -95,7 +94,6 @@ export type CreateTeamInput = {
 
 export type CreateInviteInput = {
   competitionId: string;
-  teamId: string | null;
 };
 
 export type CreateActivityRuleInput = {
@@ -304,11 +302,10 @@ export function listenChallengeDetail(
               const data = inviteDoc.data();
 
               return {
-                id: inviteDoc.id,
-                code: String(data.code ?? ""),
-                teamId: typeof data.teamId === "string" ? data.teamId : null,
-                disabledAt: data.disabledAt ?? null,
-              } satisfies Invite;
+              id: inviteDoc.id,
+              code: String(data.code ?? ""),
+              disabledAt: data.disabledAt ?? null,
+            } satisfies Invite;
             })
             .sort((a, b) => a.code.localeCompare(b.code));
           emit();
@@ -507,7 +504,6 @@ export async function createInvite(input: CreateInviteInput, createdBy: string) 
     {
       code: createInviteCode(),
       createdBy,
-      teamId: input.teamId,
       createdAt: serverTimestamp(),
       disabledAt: null,
     },
@@ -560,7 +556,7 @@ export async function joinChallenge(user: User, code: string, displayName: strin
     userId: user.uid,
     displayNameSnapshot,
     emailSnapshot: user.email ?? null,
-    teamId: inviteData.teamId || null,
+    teamId: null,
     role: "participant",
     status: "active",
     joinedAt: now,

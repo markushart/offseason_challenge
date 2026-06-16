@@ -106,13 +106,12 @@ Participants choose `displayNameSnapshot` when accepting an invite. Admin member
 {
   "code": "ABC123",
   "createdBy": "adminUserId",
-  "teamId": null,
   "createdAt": "serverTimestamp",
   "disabledAt": null
 }
 ```
 
-An invite link may be reused by anyone with the code. It may optionally preselect a team. If `teamId` is null, the participant joins the competition as unassigned.
+Each competition should expose one reusable invite link. New participants always join as unassigned; admins assign teams from the member list.
 
 ## `competitions/{competitionId}/activityRules/{activityRuleId}`
 
