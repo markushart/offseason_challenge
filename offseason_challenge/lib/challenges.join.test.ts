@@ -195,6 +195,9 @@ describe("joinChallenge", () => {
     );
 
     expect(competitionId).toBe("competition-1");
+    expect(mocks.updateDoc).toHaveBeenCalledWith("member-ref", {
+      displayNameSnapshot: "Player One",
+    });
     expect(mocks.writeBatch).not.toHaveBeenCalled();
   });
 

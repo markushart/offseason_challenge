@@ -200,6 +200,27 @@ service cloud.firestore {
         );
     }
 
+    function validMemberSelfJoinUpdate(data, userId) {
+      return isOwner(userId) &&
+        resource.data.role == "participant" &&
+        resource.data.status in ["invited", "removed"] &&
+        validMemberCreate(data, userId) &&
+        data.role == "participant" &&
+        data.status == "active";
+    }
+
+    function validMemberSelfNameUpdate(data, userId) {
+      return isOwner(userId) &&
+        resource.data.role == "participant" &&
+        resource.data.status == "active" &&
+        validMemberUpdate(data, userId) &&
+        data.role == "participant" &&
+        data.status == "active" &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "displayNameSnapshot"
+        ]);
+    }
+
     function validTeam(data) {
       return data.keys().hasOnly(["name", "color", "createdAt", "updatedAt"]) &&
         validString(data.name, 2, 50) &&
@@ -315,8 +336,12 @@ service cloud.firestore {
               request.resource.data.status == "active")
           ) &&
           validMemberCreate(request.resource.data, userId);
-        allow update: if isCompetitionAdmin(competitionId) &&
-          validMemberUpdate(request.resource.data, userId);
+        allow update: if (
+            isCompetitionAdmin(competitionId) &&
+            validMemberUpdate(request.resource.data, userId)
+          ) ||
+          validMemberSelfJoinUpdate(request.resource.data, userId) ||
+          validMemberSelfNameUpdate(request.resource.data, userId);
         allow delete: if false;
       }
 

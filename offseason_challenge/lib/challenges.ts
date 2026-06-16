@@ -547,6 +547,9 @@ export async function joinChallenge(user: User, code: string, displayName: strin
   const memberSnapshot = await getDoc(memberRef);
   
   if (memberSnapshot.exists() && memberSnapshot.data().status === "active") {
+    await updateDoc(memberRef, {
+      displayNameSnapshot,
+    });
     return competitionId; // Already a member
   }
   
