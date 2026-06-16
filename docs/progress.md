@@ -41,6 +41,8 @@
 - Added participant-chosen display names during invite join.
 - Added admin participant removal and hid participant email addresses from the member list.
 - Added separate Challenge/Admin panes.
+- Fixed challenge pane for non-admin users to show total team scores and rankings (previously only showed self-points).
+- Fixed "Join Challenge" permission error where users couldn't read their own member profile before joining.
 - Added member activity submission with completion dates.
 - Added recent activity feed and standings from accepted activity logs.
 - Added admin removal of activity rules.
@@ -55,7 +57,11 @@
 - Deployed prototype Firestore rules and indexes for the first challenge-admin workflow.
 - Added `docs/development.md` with current commands, testing rules, and deployment notes.
 
-## In Progress
+## Stashed / Delayed Features
+
+- **Requires Proof (Feature Branch: `feature/requires-proof`):** Implemented Firebase Storage integration, image upload for activity proof, and attachment viewing in the feed. Stashed in a separate branch per user request to delay implementation.
+
+## Completed
 
 - Challenge/admin workflow iteration.
 - Mobile-first interface refinement.
