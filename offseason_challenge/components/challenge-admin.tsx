@@ -403,21 +403,10 @@ export function ChallengeAdmin({
                 ? selectedChallenge.description || "Manage teams, invites, and activities."
                 : "Welcome! Create a new team competition to get started."}
             </p>
-            {isAdmin && selectedChallenge && (
-              <button 
-                onClick={() => {
-                  setActivePane("admin");
-                  setIsEditing(!isEditing);
-                }}
-                className="text-xs font-black uppercase tracking-widest text-brand hover:underline"
-              >
-                {isEditing ? "Cancel" : "Edit Details"}
-              </button>
-            )}
           </div>
         </div>
 
-        {selectedChallenge && !isEditing && (
+        {selectedChallenge && (
           <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 lg:flex">
             <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
@@ -477,58 +466,6 @@ export function ChallengeAdmin({
             </form>
           </div>
         </div>
-      ) : isEditing && selectedChallenge ? (
-        <div className="max-w-xl mx-auto w-full py-8">
-          <div className="panel flex flex-col gap-6 shadow-xl border-brand/20">
-            <h2 className="text-xl font-bold text-brand-strong">Edit challenge</h2>
-            <form className="grid gap-4" onSubmit={handleUpdateChallenge}>
-              <label>
-                <span>Challenge Name</span>
-                <input
-                  defaultValue={selectedChallenge.name}
-                  maxLength={80}
-                  name="challengeName"
-                  required
-                />
-              </label>
-              <label>
-                <span>Description</span>
-                <input
-                  defaultValue={selectedChallenge.description}
-                  maxLength={240}
-                  name="challengeDescription"
-                />
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <label>
-                  <span>Starts At</span>
-                  <input 
-                    defaultValue={selectedChallenge.startsAt?.toISOString().slice(0, 10)} 
-                    name="startsAt" 
-                    required 
-                    type="date" 
-                  />
-                </label>
-                <label>
-                  <span>Ends At</span>
-                  <input 
-                    defaultValue={selectedChallenge.endsAt?.toISOString().slice(0, 10)} 
-                    name="endsAt" 
-                    required 
-                    type="date" 
-                  />
-                </label>
-              </div>
-              <button
-                className="button-primary mt-2"
-                disabled={isSaving}
-                type="submit"
-              >
-                {isSaving ? "Saving..." : "Save changes"}
-              </button>
-            </form>
-          </div>
-        </div>
       ) : isAdmin ? (
         <div className="flex flex-col gap-6">
           <PaneTabs activePane={activePane} onChange={setActivePane} />
@@ -547,6 +484,7 @@ export function ChallengeAdmin({
               activityRules={detail.activityRules}
               invites={detail.invites}
               isSaving={isSaving}
+              isEditing={isEditing}
               members={detail.members}
               onAssignTeam={handleAssignTeam}
               onCreateActivity={handleCreateActivity}
@@ -555,8 +493,11 @@ export function ChallengeAdmin({
               onDeleteActivity={handleDeleteActivity}
               onDeleteChallenge={handleDeleteChallenge}
               onRemoveParticipant={handleRemoveParticipant}
+              onToggleEdit={() => setIsEditing((current) => !current)}
               onToggleActivity={handleToggleActivity}
+              onUpdateChallenge={handleUpdateChallenge}
               teams={detail.teams}
+              selectedChallenge={selectedChallenge}
             />
           )}
         </div>
@@ -641,6 +582,7 @@ function ChallengePane({
 
 function AdminPane({
   activityRules,
+  isEditing,
   invites,
   isSaving,
   members,
@@ -651,10 +593,14 @@ function AdminPane({
   onDeleteActivity,
   onDeleteChallenge,
   onRemoveParticipant,
+  onToggleEdit,
   onToggleActivity,
+  onUpdateChallenge,
+  selectedChallenge,
   teams,
 }: {
   activityRules: ActivityRule[];
+  isEditing: boolean;
   invites: ChallengeDetail["invites"];
   isSaving: boolean;
   members: Member[];
@@ -665,11 +611,78 @@ function AdminPane({
   onDeleteActivity: (activityRule: ActivityRule) => void;
   onDeleteChallenge: () => void;
   onRemoveParticipant: (member: Member) => void;
+  onToggleEdit: () => void;
   onToggleActivity: (activityRule: ActivityRule) => void;
+  onUpdateChallenge: (event: FormEvent<HTMLFormElement>) => void;
+  selectedChallenge: Challenge | null;
   teams: Team[];
 }) {
   return (
     <div className="flex flex-col gap-6">
+      <section className="panel flex flex-col gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="eyebrow">Challenge settings</p>
+            <h2 className="text-xl font-bold text-brand-strong">Manage details</h2>
+          </div>
+          <button
+            className="text-xs font-black uppercase tracking-widest text-brand hover:underline"
+            onClick={onToggleEdit}
+            type="button"
+          >
+            {isEditing ? "Close Details" : "Edit Details"}
+          </button>
+        </div>
+        {isEditing && selectedChallenge ? (
+          <form className="grid gap-4" onSubmit={onUpdateChallenge}>
+            <label>
+              <span>Challenge Name</span>
+              <input
+                defaultValue={selectedChallenge.name}
+                maxLength={80}
+                name="challengeName"
+                required
+              />
+            </label>
+            <label>
+              <span>Description</span>
+              <input
+                defaultValue={selectedChallenge.description}
+                maxLength={240}
+                name="challengeDescription"
+              />
+            </label>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label>
+                <span>Starts At</span>
+                <input
+                  defaultValue={selectedChallenge.startsAt?.toISOString().slice(0, 10)}
+                  name="startsAt"
+                  required
+                  type="date"
+                />
+              </label>
+              <label>
+                <span>Ends At</span>
+                <input
+                  defaultValue={selectedChallenge.endsAt?.toISOString().slice(0, 10)}
+                  name="endsAt"
+                  required
+                  type="date"
+                />
+              </label>
+            </div>
+            <button className="button-primary mt-2 w-fit" disabled={isSaving} type="submit">
+              {isSaving ? "Saving..." : "Save changes"}
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm font-medium text-muted">
+            Challenge name, description, and dates are edited here by admins only.
+          </p>
+        )}
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <TeamPanel
           isSaving={isSaving}
@@ -729,6 +742,31 @@ function ChallengeOverview({
   const unassignedMembers = activeMembers.filter((member) => !member.teamId);
   const activeMemberTeamByUserId = new Map(
     activeMembers.map((member) => [member.userId, member.teamId]),
+  );
+  const memberRowsByTeam = new Map(
+    teams.map((team) => {
+      const teamMembers = activeMembers
+        .filter((member) => member.teamId === team.id)
+        .map((member) => {
+          const points = activityLogs
+            .filter(
+              (activityLog) =>
+                activityLog.status === "accepted" &&
+                activityLog.userId === member.userId &&
+                activeMemberTeamByUserId.get(activityLog.userId) === team.id,
+            )
+            .reduce((total, activityLog) => total + activityLog.finalPoints, 0);
+
+          return {
+            id: member.userId,
+            name: member.displayNameSnapshot,
+            points,
+          };
+        })
+        .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+
+      return [team.id, teamMembers] as const;
+    }),
   );
   const teamRows = teams.map((team) => {
     const teamMembers = activeMembers.filter((member) => member.teamId === team.id);
@@ -798,6 +836,32 @@ function ChallengeOverview({
                   {team.points}
                 </strong>
               </div>
+              <details className="mt-4 rounded-lg border border-line bg-white/70 p-3">
+                <summary className="cursor-pointer text-xs font-black uppercase tracking-widest text-muted">
+                  Participant scores
+                </summary>
+                <div className="mt-3 grid gap-2">
+                  {(memberRowsByTeam.get(team.id) ?? []).length === 0 ? (
+                    <p className="text-sm font-medium text-muted">
+                      No participants are assigned to this team yet.
+                    </p>
+                  ) : (
+                    (memberRowsByTeam.get(team.id) ?? []).map((memberRow) => (
+                      <div
+                        className="flex items-center justify-between gap-3 rounded-md bg-surface-soft px-3 py-2"
+                        key={memberRow.id}
+                      >
+                        <span className="min-w-0 truncate text-sm font-medium text-brand-strong">
+                          {memberRow.name}
+                        </span>
+                        <strong className="text-sm font-black text-brand-strong">
+                          {memberRow.points}
+                        </strong>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </details>
               <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
                 <div
                   className="h-full rounded-full"

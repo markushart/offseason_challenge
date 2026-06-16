@@ -102,7 +102,9 @@ describe("ChallengeAdmin", () => {
 
     // Wait for the challenge title to appear
     await screen.findByText("Summer Challenge");
+    expect(screen.queryByRole("button", { name: /edit details/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
+    expect(screen.getByRole("button", { name: /edit details/i })).toBeInTheDocument();
 
     const teamNameInput = screen.getByLabelText(/team name/i);
     await user.type(teamNameInput, "Team Red");
@@ -226,6 +228,7 @@ describe("ChallengeAdmin", () => {
     expect(await screen.findByText("Standings")).toBeInTheDocument();
     expect(screen.getByText("Team Blue")).toBeInTheDocument();
     expect(screen.getByText("Team Red")).toBeInTheDocument();
+    expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getAllByText("5").length).toBeGreaterThan(0);
     expect(screen.getByText("1 active member is waiting for a team.")).toBeInTheDocument();
     expect(screen.queryByText(/points were logged before members received a team/i)).not.toBeInTheDocument();

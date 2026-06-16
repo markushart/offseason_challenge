@@ -10,6 +10,8 @@
 - The signed-in product surface has separate Challenge and Admin panes for each selected challenge.
 - The Challenge pane shows standings, recent activity, and member activity submission from enabled fixed-point rules.
 - The Admin pane manages challenge teams, one reusable invite link, fixed-point activity rules, participant team assignment, participant removal, and challenge archiving.
+- Challenge details and date edits are restricted to the Admin pane.
+- Team standings can be expanded to show per-participant scores under each team.
 - Signed-in users can switch between joined challenges from a dashboard sidebar/mobile selector.
 - Invite links with `?join=CODE` are supported and can auto-join a signed-in user to a challenge.
 - Frontend design should be mobile-first because the app will mostly be used on phones.
@@ -43,6 +45,8 @@
 - Added recent activity feed and standings from accepted activity logs.
 - Added admin removal of activity rules.
 - Updated standings to calculate team points from each active member's current team assignment, so points follow a participant after team assignment.
+- Added per-team participant score breakdown.
+- Moved challenge detail editing into the Admin pane only.
 - Added mobile layout refinements for challenge date metrics, admin panels, and long activity lists.
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.

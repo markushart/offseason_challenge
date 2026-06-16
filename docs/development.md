@@ -12,6 +12,7 @@
   - join through a reusable invite link
   - choose a challenge display name while joining
   - see team standings
+  - expand a team to see participant scores
   - add completed fixed-point activities with a completion date
   - see recent activity
 - Current admin capabilities:
@@ -24,6 +25,7 @@
   - assign members to teams
   - remove participants
   - archive challenges
+  - edit challenge name, description, and dates from the Admin pane only
 
 ## Local Commands
 
