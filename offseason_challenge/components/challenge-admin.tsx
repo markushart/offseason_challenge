@@ -11,6 +11,7 @@ import {
   deleteChallenge,
   listenChallenge,
   listenChallengeDetail,
+  removeParticipant,
   setActivityRuleEnabled,
   updateChallenge,
   type ActivityRule,
@@ -290,6 +291,29 @@ export function ChallengeAdmin({
     }
   };
 
+  const handleRemoveParticipant = async (member: Member) => {
+    if (!selectedChallenge || member.role !== "participant") {
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove ${member.displayNameSnapshot} from this challenge?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await removeParticipant(selectedChallenge.id, member.userId);
+    } catch (err) {
+      setError(getMessage(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
@@ -464,8 +488,10 @@ export function ChallengeAdmin({
           </div>
           
           <MemberPanel 
+            isSaving={isSaving}
             members={detail.members} 
             onAssignTeam={handleAssignTeam} 
+            onRemoveParticipant={handleRemoveParticipant}
             teams={detail.teams} 
           />
         </div>
@@ -710,24 +736,30 @@ function InvitePanel({
 }
 
 function MemberPanel({
+  isSaving,
   members,
   teams,
   onAssignTeam,
+  onRemoveParticipant,
 }: {
+  isSaving: boolean;
   members: Member[];
   teams: Team[];
   onAssignTeam: (userId: string, teamId: string | null) => void;
+  onRemoveParticipant: (member: Member) => void;
 }) {
+  const activeMembers = members.filter((member) => member.status === "active");
+
   return (
     <section className="panel flex flex-col gap-4">
       <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Members</h2>
       <div className="grid gap-2">
-        {members.length === 0 ? (
+        {activeMembers.length === 0 ? (
           <p className="p-6 text-center text-muted italic bg-surface-soft rounded-lg">
             No members yet. Share an invite link to get started.
           </p>
         ) : null}
-        {members.map((member) => (
+        {activeMembers.map((member) => (
           <div
             className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4 gap-4"
             key={member.userId}
@@ -738,11 +770,10 @@ function MemberPanel({
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-brand-strong truncate">{member.displayNameSnapshot}</p>
-                <p className="text-xs text-muted font-medium truncate">{member.emailSnapshot || "No email"}</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <label className="!grid-cols-[auto_1fr] items-center gap-2">
                 <span className="whitespace-nowrap">Team:</span>
                 <select 
@@ -761,6 +792,16 @@ function MemberPanel({
               }`}>
                 {member.role}
               </span>
+              {member.role === "participant" ? (
+                <button
+                  className="rounded border border-danger/30 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSaving}
+                  onClick={() => onRemoveParticipant(member)}
+                  type="button"
+                >
+                  Remove
+                </button>
+              ) : null}
             </div>
           </div>
         ))}

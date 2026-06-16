@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   deleteChallenge: vi.fn(),
   listenChallenge: vi.fn(),
   listenChallengeDetail: vi.fn(),
+  removeParticipant: vi.fn(),
   setActivityRuleEnabled: vi.fn(),
 }));
 
@@ -35,6 +36,7 @@ vi.mock("@/lib/challenges", () => ({
   deleteChallenge: mocks.deleteChallenge,
   listenChallenge: mocks.listenChallenge,
   listenChallengeDetail: mocks.listenChallengeDetail,
+  removeParticipant: mocks.removeParticipant,
   setActivityRuleEnabled: mocks.setActivityRuleEnabled,
 }));
 
@@ -47,6 +49,7 @@ describe("ChallengeAdmin", () => {
     mocks.createInvite.mockResolvedValue(undefined);
     mocks.createTeam.mockResolvedValue(undefined);
     mocks.deleteChallenge.mockResolvedValue(undefined);
+    mocks.removeParticipant.mockResolvedValue(undefined);
     mocks.setActivityRuleEnabled.mockResolvedValue(undefined);
 
     mocks.listenChallenge.mockImplementation((_id, onData) => {
@@ -202,5 +205,47 @@ describe("ChallengeAdmin", () => {
     expect(screen.getByText("Team Red")).toBeInTheDocument();
     expect(screen.getByText("1 active member is waiting for a team.")).toBeInTheDocument();
     expect(screen.queryByText("Participant view coming soon. You are currently a member of this team.")).not.toBeInTheDocument();
+  });
+
+  it("lets admins remove participants without showing email addresses", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Player One",
+            emailSnapshot: "player@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Player One")).toBeInTheDocument();
+    expect(screen.queryByText("player@example.com")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+
+    await waitFor(() => {
+      expect(mocks.removeParticipant).toHaveBeenCalledWith("challenge-1", "user-2");
+    });
   });
 });

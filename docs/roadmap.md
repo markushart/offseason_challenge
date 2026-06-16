@@ -23,14 +23,14 @@
 - Store creator as competition admin. Done.
 - Add competition list for the signed-in user. Initial member challenge list and switching UI done.
 - Add competition detail page. Initial same-page admin management view done.
-- Add team creation and editing. Team creation and member assignment are done; editing/removal not started.
+- Add team creation and editing. Team creation, member assignment, and participant removal are done; team editing/removal not started.
 - Add member list. Done.
 - Add admin-only controls. Initial Firestore rules and UI controls done for challenge admins.
 
 ## Phase 3: Invites and Team Assignment
 
 - Generate invite codes or links. Initial invite code generation done.
-- Let participants join a competition through an invite. Initial client-side join flow is done; callable Cloud Function version is pending.
+- Let participants join a competition through an invite. Initial client-side join flow with participant-chosen display names is done; callable Cloud Function version is pending.
 - Let admins assign participants to teams. Initial assignment flow done.
 - Prevent duplicate active membership for the same competition.
 

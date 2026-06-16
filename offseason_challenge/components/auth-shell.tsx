@@ -7,7 +7,6 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  updateProfile,
   type User,
 } from "firebase/auth";
 import {
@@ -131,8 +130,7 @@ export function AuthShell({ children }: AuthShellProps) {
 
     try {
       if (authMode === "create") {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(credential.user, { displayName: email.split("@")[0] });
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

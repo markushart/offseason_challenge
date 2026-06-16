@@ -34,6 +34,8 @@
 - Added challenge detail editing (name, description, dates) from the admin UI.
 - Added participant membership join flow using invite codes.
 - Added admin team assignment for challenge members.
+- Added participant-chosen display names during invite join.
+- Added admin participant removal and hid participant email addresses from the member list.
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.
 - Updated Firebase Hosting workflows to run lint, tests, and build before deploy.

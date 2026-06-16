@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardShell } from "@/components/dashboard-shell";
 
@@ -31,6 +32,7 @@ describe("DashboardShell", () => {
   });
 
   it("shows a join error if invite-link joining fails", async () => {
+    const user = userEvent.setup();
     window.history.pushState({}, "", "/?join=ABC123");
     mocks.joinChallenge.mockRejectedValue(new Error("Invalid invite code."));
 
@@ -40,14 +42,20 @@ describe("DashboardShell", () => {
       </DashboardShell>,
     );
 
+    await user.clear(await screen.findByLabelText(/your name/i));
+    await user.type(screen.getByLabelText(/your name/i), "Player One");
+    await user.click(screen.getByRole("button", { name: /^join challenge$/i }));
+
     await screen.findByText("Invalid invite code.");
     expect(mocks.joinChallenge).toHaveBeenCalledWith(
       expect.objectContaining({ uid: "user-1" }),
       "ABC123",
+      "Player One",
     );
   });
 
   it("selects the challenge returned from invite-link join", async () => {
+    const user = userEvent.setup();
     window.history.pushState({}, "", "/?join=ABC123");
     mocks.joinChallenge.mockResolvedValue("competition-1");
 
@@ -56,6 +64,10 @@ describe("DashboardShell", () => {
         {({ selectedChallengeId }) => <div>Selected: {selectedChallengeId || "none"}</div>}
       </DashboardShell>,
     );
+
+    await user.clear(await screen.findByLabelText(/your name/i));
+    await user.type(screen.getByLabelText(/your name/i), "Player One");
+    await user.click(screen.getByRole("button", { name: /^join challenge$/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Selected: competition-1")).toBeInTheDocument();

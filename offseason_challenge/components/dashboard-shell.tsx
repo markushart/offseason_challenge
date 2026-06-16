@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
 import { listenMemberChallenges, joinChallenge, type Challenge } from "@/lib/challenges";
 
@@ -15,6 +15,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const user = useSignedInUser();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return new URLSearchParams(window.location.search).get("join");
+  });
+  const [isJoining, setIsJoining] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return window.localStorage?.getItem?.("lastActiveChallengeId") ?? "";
@@ -23,27 +31,42 @@ export function DashboardShell({ children }: DashboardShellProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Handle Join Link
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("join");
-    
-    if (code) {
-      joinChallenge(user, code)
-        .then((id) => {
-          setJoinError(null);
-          setSelectedChallengeId(id);
-          // Remove param from URL
-          const url = new URL(window.location.href);
-          url.searchParams.delete("join");
-          window.history.replaceState({}, "", url.pathname);
-        })
-        .catch((err) => {
-          console.error("Failed to join challenge:", err.message);
-          setJoinError(err instanceof Error ? err.message : "Failed to join challenge.");
-        });
+  const clearJoinParam = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("join");
+    window.history.replaceState({}, "", url.pathname);
+  };
+
+  const handleJoinChallenge = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!pendingJoinCode) {
+      return;
     }
-  }, [user]);
+
+    const formData = new FormData(event.currentTarget);
+    const displayName = String(formData.get("displayName") ?? "").trim();
+
+    if (!displayName) {
+      setJoinError("Add your name to join this challenge.");
+      return;
+    }
+
+    setJoinError(null);
+    setIsJoining(true);
+
+    try {
+      const id = await joinChallenge(user, pendingJoinCode, displayName);
+      setSelectedChallengeId(id);
+      setPendingJoinCode(null);
+      clearJoinParam();
+    } catch (err) {
+      console.error("Failed to join challenge:", err);
+      setJoinError(err instanceof Error ? err.message : "Failed to join challenge.");
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   // Update localStorage when selection changes
   useEffect(() => {
@@ -164,6 +187,33 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          {pendingJoinCode ? (
+            <form
+              className="mb-4 rounded-lg border border-line bg-surface p-4 shadow-sm"
+              onSubmit={handleJoinChallenge}
+            >
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <label>
+                  <span>Your name</span>
+                  <input
+                    autoFocus
+                    defaultValue={user.displayName ?? ""}
+                    maxLength={80}
+                    name="displayName"
+                    placeholder="Name shown in this challenge"
+                    required
+                  />
+                </label>
+                <button
+                  className="button-primary"
+                  disabled={isJoining}
+                  type="submit"
+                >
+                  {isJoining ? "Joining..." : "Join challenge"}
+                </button>
+              </div>
+            </form>
+          ) : null}
           {joinError ? (
             <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
               {joinError}

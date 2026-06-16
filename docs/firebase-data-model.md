@@ -77,6 +77,8 @@ Team score can be calculated from accepted logs. A cached score may be added lat
 ```json
 {
   "userId": "userId",
+  "displayNameSnapshot": "Participant Name",
+  "emailSnapshot": "participant@example.com",
   "teamId": "teamId",
   "role": "participant",
   "status": "active",
@@ -95,6 +97,8 @@ Suggested statuses:
 - `invited`
 - `active`
 - `removed`
+
+Participants choose `displayNameSnapshot` when accepting an invite. Admin member lists should show participant display names, not email addresses. Removing a participant marks the member `removed` and removes the user ID from the competition `memberIds` array so the challenge no longer appears in their list.
 
 ## `competitions/{competitionId}/invites/{inviteId}`
 

@@ -50,8 +50,10 @@ This role is not required for the first version, but may be useful later for glo
 
 - Admin creates invite links or invite codes for a competition.
 - Participant uses the invite to enroll.
+- Participant chooses the display name shown inside the competition during invite enrollment.
 - Participant starts as unassigned until the admin places them on a team, unless self-selection is enabled.
 - A participant should only belong to one team per competition.
+- Admin can remove participant members from a competition without exposing participant email addresses in the member list.
 
 ### Team Competition
 

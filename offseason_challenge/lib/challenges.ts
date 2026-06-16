@@ -1,6 +1,7 @@
 import type { User } from "firebase/auth";
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
   collectionGroup,
@@ -466,6 +467,23 @@ export async function assignTeam(
   });
 }
 
+export async function removeParticipant(competitionId: string, userId: string) {
+  const firestore = assertDb();
+  const batch = writeBatch(firestore);
+  const now = serverTimestamp();
+
+  batch.update(doc(firestore, "competitions", competitionId, "members", userId), {
+    status: "removed",
+    teamId: null,
+  });
+  batch.update(doc(firestore, "competitions", competitionId), {
+    memberIds: arrayRemove(userId),
+    updatedAt: now,
+  });
+
+  await batch.commit();
+}
+
 export async function createInvite(input: CreateInviteInput, createdBy: string) {
   const firestore = assertDb();
 
@@ -481,8 +499,13 @@ export async function createInvite(input: CreateInviteInput, createdBy: string) 
   );
 }
 
-export async function joinChallenge(user: User, code: string) {
+export async function joinChallenge(user: User, code: string, displayName: string) {
   const firestore = assertDb();
+  const displayNameSnapshot = displayName.trim();
+
+  if (!displayNameSnapshot) {
+    throw new Error("Add your name to join this challenge.");
+  }
   
   // Find the invite
   const invitesQuery = query(
@@ -517,7 +540,7 @@ export async function joinChallenge(user: User, code: string) {
 
   batch.set(memberRef, {
     userId: user.uid,
-    displayNameSnapshot: user.displayName ?? user.email ?? "Participant",
+    displayNameSnapshot,
     emailSnapshot: user.email ?? null,
     teamId: inviteData.teamId || null,
     role: "participant",
