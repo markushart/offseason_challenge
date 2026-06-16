@@ -399,60 +399,30 @@ export function listenChallengeDetail(
     ),
   );
 
-  if (includeAdminData) {
-    unsubscribers.push(
-      onSnapshot(
-        collection(firestore, "competitions", competitionId, "members"),
-        (snapshot) => {
-          members = snapshot.docs
-            .map((memberDoc) => {
-              const data = memberDoc.data();
+  unsubscribers.push(
+    onSnapshot(
+      collection(firestore, "competitions", competitionId, "members"),
+      (snapshot) => {
+        members = snapshot.docs
+          .map((memberDoc) => {
+            const data = memberDoc.data();
 
-              return {
-                userId: memberDoc.id,
-                displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
-                emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
-                teamId: data.teamId ? String(data.teamId) : null,
-                role: data.role ?? "participant",
-                status: data.status ?? "active",
-                joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
-              } satisfies Member;
-            })
-            .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
-          emit();
-        },
-        onError,
-      ),
-    );
-  } else if (options.currentUserId) {
-    unsubscribers.push(
-      onSnapshot(
-        doc(firestore, "competitions", competitionId, "members", options.currentUserId),
-        (snapshot) => {
-          if (!snapshot.exists()) {
-            members = [];
-            emit();
-            return;
-          }
-
-          const data = snapshot.data();
-          members = [
-            {
-              userId: snapshot.id,
+            return {
+              userId: memberDoc.id,
               displayNameSnapshot: String(data.displayNameSnapshot ?? ""),
-              emailSnapshot: data.emailSnapshot ? String(data.emailSnapshot) : null,
+              emailSnapshot: includeAdminData ? (data.emailSnapshot ? String(data.emailSnapshot) : null) : null,
               teamId: data.teamId ? String(data.teamId) : null,
               role: data.role ?? "participant",
               status: data.status ?? "active",
               joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : null,
-            },
-          ];
-          emit();
-        },
-        onError,
-      ),
-    );
-  }
+            } satisfies Member;
+          })
+          .sort((a, b) => a.displayNameSnapshot.localeCompare(b.displayNameSnapshot));
+        emit();
+      },
+      onError,
+    ),
+  );
 
   return () => {
     unsubscribers.forEach((unsubscribe) => unsubscribe());

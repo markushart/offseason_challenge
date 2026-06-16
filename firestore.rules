@@ -366,7 +366,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /members/{userId} {
-        allow read: if isCompetitionAdmin(competitionId) || isOwner(userId);
+        allow read: if canReadCompetition(competitionId);
         allow create: if (
             isCompetitionAdminAfter(competitionId) ||
             (isOwner(userId) &&
