@@ -812,9 +812,9 @@ function ChallengeOverview({
           Teams will appear here once the challenge admin creates them.
         </p>
       ) : (
-        <div className="grid gap-3">
+        <ol className="grid gap-3">
           {teamRows.map((team, index) => (
-            <div
+            <li
               className="rounded-lg border border-line bg-surface-soft/30 p-4"
               key={team.id}
             >
@@ -871,9 +871,9 @@ function ChallengeOverview({
                   }}
                 />
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
 
       {unassignedMembers.length > 0 ? (
