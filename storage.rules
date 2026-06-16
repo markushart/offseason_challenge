@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /competitions/{competitionId}/proofs/{fileName} {
+      // Allow read access if the user is a competition member or admin
+      allow read: if request.auth != null && 
+        firestore.exists(/databases/(default)/documents/competitions/$(competitionId)/members/$(request.auth.uid));
+      
+      // Allow write access if the user is a competition member and the fileName starts with their UID
+      allow create: if request.auth != null && 
+        firestore.get(/databases/(default)/documents/competitions/$(competitionId)/members/$(request.auth.uid)).data.status == "active" &&
+        fileName.startsWith(request.auth.uid) &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+}

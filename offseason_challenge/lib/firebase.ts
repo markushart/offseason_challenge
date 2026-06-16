@@ -9,6 +9,11 @@ import {
   getFirestore,
   type Firestore,
 } from "firebase/firestore";
+import {
+  connectStorageEmulator,
+  getStorage,
+  type FirebaseStorage,
+} from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim(),
@@ -35,10 +40,12 @@ export const app: FirebaseApp | null = hasFirebaseConfig
 
 export const auth: Auth | null = app ? getAuth(app) : null;
 export const db: Firestore | null = app ? getFirestore(app) : null;
+export const storage: FirebaseStorage | null = app ? getStorage(app) : null;
 
 type EmulatorWindow = Window & {
   __OFFSEASON_AUTH_EMULATOR_CONNECTED__?: boolean;
   __OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__?: boolean;
+  __OFFSEASON_STORAGE_EMULATOR_CONNECTED__?: boolean;
 };
 
 if (
@@ -58,5 +65,10 @@ if (
   if (db && !emulatorWindow.__OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__) {
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
     emulatorWindow.__OFFSEASON_FIRESTORE_EMULATOR_CONNECTED__ = true;
+  }
+
+  if (storage && !emulatorWindow.__OFFSEASON_STORAGE_EMULATOR_CONNECTED__) {
+    connectStorageEmulator(storage, "127.0.0.1", 9199);
+    emulatorWindow.__OFFSEASON_STORAGE_EMULATOR_CONNECTED__ = true;
   }
 }

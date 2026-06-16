@@ -16,6 +16,7 @@ import {
   removeParticipant,
   setActivityRuleEnabled,
   updateChallenge,
+  uploadProof,
   type ActivityRule,
   type Challenge,
   type ChallengeDetail,
@@ -330,9 +331,15 @@ export function ChallengeAdmin({
     const activityRuleId = String(formData.get("activityRuleId") ?? "");
     const activityDate = String(formData.get("activityDate") ?? "");
     const activityRule = detail.activityRules.find((rule) => rule.id === activityRuleId);
+    const proofFile = formData.get("proofFile") as File | null;
 
     if (!activityRule || !activityRule.enabled || !activityDate) {
       setError("Select an active activity and date.");
+      return;
+    }
+
+    if (activityRule.requiresProof && (!proofFile || proofFile.size === 0)) {
+      setError("This activity requires a photo for proof.");
       return;
     }
 
@@ -340,12 +347,18 @@ export function ChallengeAdmin({
     setIsSaving(true);
 
     try {
+      let proofUrl: string | null = null;
+      if (proofFile && proofFile.size > 0) {
+        proofUrl = await uploadProof(selectedChallenge.id, user.uid, proofFile);
+      }
+
       await createActivityLog({
         competitionId: selectedChallenge.id,
         activityRule,
         activityDate,
         teamId: currentMember.teamId,
         userId: user.uid,
+        proofUrl,
       });
       form.reset();
     } catch (createError) {
@@ -912,7 +925,9 @@ function ActivitySubmissionPanel({
   isSaving: boolean;
   onCreateActivityLog: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [selectedRuleId, setSelectedRuleId] = useState<string>("");
   const enabledRules = activityRules.filter((activityRule) => activityRule.enabled);
+  const selectedRule = enabledRules.find((rule) => rule.id === selectedRuleId);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -933,7 +948,12 @@ function ActivitySubmissionPanel({
         <form className="grid gap-4" onSubmit={onCreateActivityLog}>
           <label>
             <span>Activity</span>
-            <select name="activityRuleId" required>
+            <select 
+              name="activityRuleId" 
+              required 
+              value={selectedRuleId}
+              onChange={(e) => setSelectedRuleId(e.target.value)}
+            >
               <option value="">Select activity</option>
               {enabledRules.map((activityRule) => (
                 <option key={activityRule.id} value={activityRule.id}>
@@ -946,8 +966,21 @@ function ActivitySubmissionPanel({
             <span>Date completed</span>
             <input defaultValue={today} max={today} name="activityDate" required type="date" />
           </label>
+          
+          {(selectedRule?.requiresProof || selectedRuleId) && (
+            <label className={!selectedRule?.requiresProof ? "opacity-50" : ""}>
+              <span>Photo Proof {selectedRule?.requiresProof && "(Required)"}</span>
+              <input 
+                accept="image/*" 
+                name="proofFile" 
+                required={selectedRule?.requiresProof} 
+                type="file" 
+              />
+            </label>
+          )}
+
           <button className="button-primary" disabled={isSaving} type="submit">
-            Add activity
+            {isSaving ? "Uploading..." : "Add activity"}
           </button>
         </form>
       )}
@@ -956,7 +989,9 @@ function ActivitySubmissionPanel({
 }
 
 function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const recentLogs = activityLogs.slice(0, 8);
+  const selectedLog = recentLogs.find((log) => log.id === selectedLogId);
 
   return (
     <section className="panel flex flex-col gap-4">
@@ -970,11 +1005,15 @@ function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
       ) : (
         <div className="grid gap-2">
           {recentLogs.map((activityLog) => (
-            <div
-              className="rounded-lg border border-line bg-surface-soft/30 p-3"
+            <button
+              className={`flex flex-col rounded-lg border border-line bg-surface-soft/30 p-3 text-left transition-colors hover:bg-surface-soft ${
+                selectedLogId === activityLog.id ? "ring-2 ring-brand ring-inset" : ""
+              }`}
               key={activityLog.id}
+              onClick={() => setSelectedLogId(selectedLogId === activityLog.id ? null : activityLog.id)}
+              type="button"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 w-full">
                 <div className="min-w-0">
                   <p className="truncate font-bold text-brand-strong">
                     {activityLog.activityNameSnapshot}
@@ -983,11 +1022,31 @@ function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
                     {activityLog.activityDate?.toLocaleDateString() ?? "No date"}
                   </p>
                 </div>
-                <strong className="text-lg font-black text-brand-strong">
-                  {activityLog.finalPoints}
-                </strong>
+                <div className="flex items-center gap-2">
+                  {activityLog.proofUrl && (
+                    <span className="text-muted" title="Proof attachment">
+                      <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </span>
+                  )}
+                  <strong className="text-lg font-black text-brand-strong">
+                    {activityLog.finalPoints}
+                  </strong>
+                </div>
               </div>
-            </div>
+              
+              {selectedLogId === activityLog.id && activityLog.proofUrl && (
+                <div className="mt-3 overflow-hidden rounded-md border border-line bg-white">
+                  <img 
+                    alt={`Proof for ${activityLog.activityNameSnapshot}`} 
+                    className="h-auto w-full object-contain" 
+                    src={activityLog.proofUrl} 
+                  />
+                </div>
+              )}
+              {selectedLogId === activityLog.id && !activityLog.proofUrl && (
+                <p className="mt-2 text-xs italic text-muted">No proof attached.</p>
+              )}
+            </button>
           ))}
         </div>
       )}

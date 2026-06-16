@@ -388,6 +388,7 @@ describe("ChallengeAdmin", () => {
         activityDate: "2026-06-10",
         teamId: "team-blue",
         userId: "user-1",
+        proofUrl: null,
       });
     });
   });

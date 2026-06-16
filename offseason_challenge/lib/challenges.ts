@@ -22,7 +22,8 @@ import {
   type QuerySnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
 export type Challenge = {
   id: string;
@@ -79,6 +80,7 @@ export type ActivityLog = {
   calculatedPoints: number;
   finalPoints: number;
   status: "accepted";
+  proofUrl?: string | null;
   createdAt: Date | null;
 };
 
@@ -125,6 +127,7 @@ export type CreateActivityLogInput = {
   activityDate: string;
   teamId: string | null;
   userId: string;
+  proofUrl?: string | null;
 };
 
 const assertDb = () => {
@@ -133,6 +136,14 @@ const assertDb = () => {
   }
 
   return db;
+};
+
+const assertStorage = () => {
+  if (!storage) {
+    throw new Error("Firebase Storage is not configured.");
+  }
+
+  return storage;
 };
 
 const fromChallengeSnapshot = (snapshot: QuerySnapshot<DocumentData>) =>
@@ -385,6 +396,7 @@ export function listenChallengeDetail(
               calculatedPoints: Number(data.calculatedPoints ?? 0),
               finalPoints: Number(data.finalPoints ?? 0),
               status: "accepted",
+              proofUrl: data.proofUrl ? String(data.proofUrl) : null,
               createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null,
             } satisfies ActivityLog;
           })
@@ -698,8 +710,24 @@ export async function createActivityLog(input: CreateActivityLogInput) {
       calculatedPoints: points,
       finalPoints: points,
       status: "accepted",
+      proofUrl: input.proofUrl || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     },
   );
+}
+
+export async function uploadProof(
+  competitionId: string,
+  userId: string,
+  file: File,
+) {
+  const storage = assertStorage();
+  const timestamp = Date.now();
+  const extension = file.name.split(".").pop() || "jpg";
+  const path = `competitions/${competitionId}/proofs/${userId}_${timestamp}.${extension}`;
+  const storageRef = ref(storage, path);
+  
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
 }
