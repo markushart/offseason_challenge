@@ -881,12 +881,12 @@ function ChallengeOverview({
         <ol className="grid gap-3">
           {teamRows.map((team, index) => (
             <li
-              className="rounded-lg border border-line bg-surface-soft/30 p-4"
+              className="min-w-0 rounded-lg border border-line bg-surface-soft/30 p-3 sm:p-4"
               key={team.id}
             >
-              <div className="flex items-center justify-between gap-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="text-sm font-black text-muted">#{index + 1}</span>
+                  <span className="flex-shrink-0 text-sm font-black text-muted">#{index + 1}</span>
                   <span
                     className="h-4 w-4 flex-shrink-0 rounded-full shadow-sm"
                     style={{ backgroundColor: team.color }}
@@ -902,7 +902,7 @@ function ChallengeOverview({
                   {team.points}
                 </strong>
               </div>
-              <details className="mt-4 rounded-lg border border-line bg-white/70 p-3">
+              <details className="mt-4 min-w-0 rounded-lg border border-line bg-white/70 p-2 sm:p-3">
                 <summary className="cursor-pointer text-xs font-black uppercase tracking-widest text-muted">
                   Participant scores
                 </summary>
@@ -914,7 +914,7 @@ function ChallengeOverview({
                   ) : (
                     (memberRowsByTeam.get(team.id) ?? []).map((memberRow) => (
                       <div
-                        className="flex items-center justify-between gap-3 rounded-md bg-surface-soft px-3 py-2"
+                        className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-surface-soft px-2 py-2 sm:px-3"
                         key={memberRow.id}
                       >
                         <span className="min-w-0 truncate text-sm font-medium text-brand-strong">
@@ -1239,11 +1239,11 @@ function MemberPanel({
         ) : null}
         {activeMembers.map((member) => (
           <div
-            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-line bg-surface-soft/30 p-4 gap-4"
+            className="flex min-w-0 flex-col justify-between gap-3 rounded-lg border border-line bg-surface-soft/30 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4"
             key={member.userId}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-brand-strong text-white font-black">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-strong text-white font-black">
                 {member.displayNameSnapshot.slice(0, 1)}
               </div>
               <div className="min-w-0">
@@ -1251,11 +1251,11 @@ function MemberPanel({
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="!grid-cols-[auto_1fr] items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+              <label className="min-w-0 flex-1 !grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:flex-none">
                 <span className="whitespace-nowrap">Team:</span>
                 <select 
-                  className="min-h-[38px] text-xs font-bold"
+                  className="min-h-[38px] min-w-0 text-xs font-bold"
                   value={member.teamId || ""} 
                   onChange={(e) => onAssignTeam(member.userId, e.target.value || null)}
                 >
