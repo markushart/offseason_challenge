@@ -435,7 +435,7 @@ export function ChallengeAdmin({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="eyebrow leading-none mb-1">
@@ -513,7 +513,7 @@ export function ChallengeAdmin({
           </div>
         </div>
       ) : isAdmin ? (
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 overflow-x-hidden">
           <PaneTabs activePane={activePane} onChange={setActivePane} />
           {activePane === "challenge" ? (
             <ChallengePane
@@ -574,10 +574,10 @@ function PaneTabs({
   onChange: (pane: "challenge" | "admin") => void;
 }) {
   return (
-    <div className="flex rounded-xl border border-line bg-surface-soft p-1">
+    <div className="flex min-w-0 rounded-lg border border-line bg-surface-soft p-1">
       {(["challenge", "admin"] as const).map((pane) => (
         <button
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-black uppercase tracking-widest transition ${
+          className={`min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-black uppercase tracking-wide transition sm:px-4 sm:tracking-widest ${
             activePane === pane
               ? "bg-white text-brand-strong shadow-sm"
               : "text-muted hover:text-brand-strong"
@@ -615,7 +615,7 @@ function ChallengePane({
   teams: Team[];
 }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <ChallengeOverview
         activityLogs={activityLogs}
         members={members}
