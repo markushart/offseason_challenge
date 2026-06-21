@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChallengeAdmin } from "@/components/challenge-admin";
 
 const mocks = vi.hoisted(() => ({
+  copyChallenge: vi.fn(),
   createActivityLog: vi.fn(),
   createActivityRule: vi.fn(),
   createChallenge: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@/lib/firebase", () => ({
 }));
 
 vi.mock("@/lib/challenges", () => ({
+  copyChallenge: mocks.copyChallenge,
   createActivityLog: mocks.createActivityLog,
   createActivityRule: mocks.createActivityRule,
   createChallenge: mocks.createChallenge,
@@ -48,6 +50,7 @@ describe("ChallengeAdmin", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    mocks.copyChallenge.mockResolvedValue("challenge-copy");
     mocks.createActivityRule.mockResolvedValue(undefined);
     mocks.createActivityLog.mockResolvedValue(undefined);
     mocks.createChallenge.mockResolvedValue("challenge-1");
@@ -153,6 +156,94 @@ describe("ChallengeAdmin", () => {
       expect(mocks.deleteChallenge).toHaveBeenCalledWith("challenge-1");
     });
     expect(onChallengeDeleted).toHaveBeenCalledTimes(1);
+  });
+
+  it("copies challenge setup into a new challenge with fresh points", async () => {
+    const user = userEvent.setup();
+    const onChallengeCreated = vi.fn();
+    const detail = {
+      teams: [{ id: "team-blue", name: "Team Blue", color: "#2563eb" }],
+      invites: [],
+      activityRules: [
+        {
+          id: "rule-1",
+          name: "Running",
+          category: "running",
+          enabled: true,
+          requiresProof: false,
+          scoring: { type: "fixed" as const, points: 5 },
+        },
+      ],
+      members: [
+        {
+          userId: "user-1",
+          displayNameSnapshot: "Admin User",
+          emailSnapshot: "admin@example.com",
+          teamId: "team-blue",
+          role: "admin" as const,
+          status: "active" as const,
+          joinedAt: null,
+        },
+        {
+          userId: "user-2",
+          displayNameSnapshot: "Player One",
+          emailSnapshot: "player@example.com",
+          teamId: "team-blue",
+          role: "participant" as const,
+          status: "active" as const,
+          joinedAt: null,
+        },
+      ],
+      activityLogs: [
+        {
+          id: "log-1",
+          userId: "user-2",
+          teamId: "team-blue",
+          activityRuleId: "rule-1",
+          activityNameSnapshot: "Running",
+          activityDate: new Date("2026-06-05"),
+          calculatedPoints: 5,
+          finalPoints: 5,
+          status: "accepted" as const,
+          createdAt: null,
+        },
+      ],
+    };
+
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData(detail);
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={onChallengeCreated}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Summer Challenge");
+    await user.click(screen.getByRole("button", { name: /^admin$/i }));
+    await user.clear(screen.getByLabelText(/new challenge name/i));
+    await user.type(screen.getByLabelText(/new challenge name/i), "Summer Challenge 2027");
+    await user.type(screen.getByLabelText(/^starts at$/i), "2027-06-01");
+    await user.type(screen.getByLabelText(/^ends at$/i), "2027-08-31");
+    await user.click(screen.getByRole("button", { name: /^copy challenge$/i }));
+
+    await waitFor(() => {
+      expect(mocks.copyChallenge).toHaveBeenCalledWith(
+        expect.objectContaining({ uid: "user-1" }),
+        expect.objectContaining({
+          sourceChallenge: expect.objectContaining({ id: "challenge-1" }),
+          detail,
+          name: "Summer Challenge 2027",
+          startsAt: "2027-06-01",
+          endsAt: "2027-08-31",
+        }),
+      );
+    });
+    expect(onChallengeCreated).toHaveBeenCalledWith("challenge-copy");
   });
 
   it("shows team progress from each member's current team assignment", async () => {

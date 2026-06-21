@@ -127,6 +127,11 @@ export type CreateActivityLogInput = {
   userId: string;
 };
 
+export type CopyChallengeInput = CreateChallengeInput & {
+  sourceChallenge: Challenge;
+  detail: ChallengeDetail;
+};
+
 const assertDb = () => {
   if (!db) {
     throw new Error("Firebase is not configured. Add values to .env.local.");
@@ -476,6 +481,123 @@ export async function createChallenge(
   });
 
   await batch.commit();
+
+  return competitionRef.id;
+}
+
+export async function copyChallenge(user: User, input: CopyChallengeInput) {
+  const firestore = assertDb();
+  const competitionRef = doc(collection(firestore, "competitions"));
+  const now = serverTimestamp();
+  const activeMembers = input.detail.members.filter(
+    (member) => member.status === "active",
+  );
+  const memberIds = Array.from(
+    new Set([
+      user.uid,
+      ...activeMembers.map((member) => member.userId),
+    ]),
+  );
+
+  const createBatch = writeBatch(firestore);
+  createBatch.set(competitionRef, {
+    name: input.name.trim(),
+    description: input.description.trim(),
+    createdBy: user.uid,
+    adminIds: [user.uid],
+    memberIds,
+    status: "active",
+    startsAt: input.startsAt ? Timestamp.fromDate(new Date(input.startsAt)) : null,
+    endsAt: input.endsAt ? Timestamp.fromDate(new Date(input.endsAt)) : null,
+    settings: {
+      activityApprovalMode: "auto",
+      proofRequired: false,
+      weekStartsOn: 1,
+      allowMoreThanTwoTeams: true,
+    },
+    copiedFrom: input.sourceChallenge.id,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  createBatch.set(
+    doc(firestore, "competitions", competitionRef.id, "members", user.uid),
+    {
+      userId: user.uid,
+      displayNameSnapshot: user.displayName ?? user.email ?? "Challenge admin",
+      emailSnapshot: user.email ?? null,
+      teamId:
+        activeMembers.find((member) => member.userId === user.uid)?.teamId ?? null,
+      role: "admin",
+      status: "active",
+      joinedAt: now,
+      invitedBy: user.uid,
+    },
+  );
+
+  await createBatch.commit();
+
+  const copyBatch = writeBatch(firestore);
+
+  input.detail.teams.forEach((team) => {
+    copyBatch.set(
+      doc(firestore, "competitions", competitionRef.id, "teams", team.id),
+      {
+        name: team.name,
+        color: team.color,
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+  });
+
+  activeMembers
+    .filter((member) => member.userId !== user.uid)
+    .forEach((member) => {
+      copyBatch.set(
+        doc(firestore, "competitions", competitionRef.id, "members", member.userId),
+        {
+          userId: member.userId,
+          displayNameSnapshot: member.displayNameSnapshot,
+          emailSnapshot: member.emailSnapshot,
+          teamId: member.teamId,
+          role: "participant",
+          status: "active",
+          joinedAt: now,
+          invitedBy: user.uid,
+        },
+      );
+    });
+
+  input.detail.activityRules.forEach((activityRule) => {
+    copyBatch.set(
+      doc(
+        firestore,
+        "competitions",
+        competitionRef.id,
+        "activityRules",
+        activityRule.id,
+      ),
+      {
+        name: activityRule.name,
+        category: activityRule.category,
+        enabled: activityRule.enabled,
+        inputType: "completion",
+        scoring: {
+          type: "fixed",
+          points: activityRule.scoring.points,
+        },
+        limits: {
+          countsTowardWeeklyExtraCap: true,
+        },
+        requiresProof: activityRule.requiresProof,
+        createdAt: now,
+        updatedAt: now,
+      },
+    );
+  });
+
+  await copyBatch.commit();
 
   return competitionRef.id;
 }

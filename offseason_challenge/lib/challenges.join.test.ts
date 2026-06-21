@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  copyChallenge,
   createActivityLog,
   createInvite,
   deleteActivityRule,
@@ -164,6 +165,139 @@ describe("joinChallenge", () => {
         status: "accepted",
       }),
     );
+  });
+
+  it("copies challenge setup without copying activity logs", async () => {
+    const createBatchSet = vi.fn();
+    const createBatchCommit = vi.fn().mockResolvedValue(undefined);
+    const copyBatchSet = vi.fn();
+    const copyBatchCommit = vi.fn().mockResolvedValue(undefined);
+    mocks.collection.mockReturnValue("competitions-collection");
+    mocks.doc.mockImplementation((...args: unknown[]) => {
+      if (args.length === 1 && args[0] === "competitions-collection") {
+        return { id: "competition-copy", path: "competitions/competition-copy" };
+      }
+
+      return { path: args.slice(1).join("/") };
+    });
+    mocks.writeBatch
+      .mockReturnValueOnce({
+        commit: createBatchCommit,
+        set: createBatchSet,
+      })
+      .mockReturnValueOnce({
+        commit: copyBatchCommit,
+        set: copyBatchSet,
+      });
+    mocks.Timestamp.fromDate.mockImplementation((date: Date) => date);
+
+    const copiedId = await copyChallenge(
+      { displayName: "Admin", email: "admin@example.com", uid: "admin-1" } as never,
+      {
+        sourceChallenge: {
+          id: "competition-1",
+          name: "Summer Challenge",
+          description: "Original",
+          status: "active",
+          adminIds: ["admin-1"],
+          createdBy: "admin-1",
+          startsAt: null,
+          endsAt: null,
+        },
+        name: "Summer Challenge 2027",
+        description: "Copied setup",
+        startsAt: "2027-06-01",
+        endsAt: "2027-08-31",
+        detail: {
+          teams: [{ id: "team-blue", name: "Team Blue", color: "#2563eb" }],
+          invites: [],
+          activityRules: [
+            {
+              id: "rule-1",
+              name: "Running",
+              category: "running",
+              enabled: true,
+              requiresProof: false,
+              scoring: { type: "fixed", points: 5 },
+            },
+          ],
+          members: [
+            {
+              userId: "admin-1",
+              displayNameSnapshot: "Admin",
+              emailSnapshot: "admin@example.com",
+              teamId: "team-blue",
+              role: "admin",
+              status: "active",
+              joinedAt: null,
+            },
+            {
+              userId: "user-2",
+              displayNameSnapshot: "Player One",
+              emailSnapshot: "player@example.com",
+              teamId: "team-blue",
+              role: "participant",
+              status: "active",
+              joinedAt: null,
+            },
+          ],
+          activityLogs: [
+            {
+              id: "log-1",
+              userId: "user-2",
+              teamId: "team-blue",
+              activityRuleId: "rule-1",
+              activityNameSnapshot: "Running",
+              activityDate: new Date("2026-06-10"),
+              calculatedPoints: 5,
+              finalPoints: 5,
+              status: "accepted",
+              createdAt: null,
+            },
+          ],
+        },
+      },
+    );
+
+    expect(copiedId).toBe("competition-copy");
+    expect(createBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "competitions/competition-copy" }),
+      expect.objectContaining({
+        name: "Summer Challenge 2027",
+        memberIds: ["admin-1", "user-2"],
+        copiedFrom: "competition-1",
+      }),
+    );
+    expect(copyBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "competitions/competition-copy/teams/team-blue",
+      }),
+      expect.objectContaining({ name: "Team Blue" }),
+    );
+    expect(copyBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "competitions/competition-copy/members/user-2",
+      }),
+      expect.objectContaining({
+        displayNameSnapshot: "Player One",
+        role: "participant",
+        teamId: "team-blue",
+      }),
+    );
+    expect(copyBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "competitions/competition-copy/activityRules/rule-1",
+      }),
+      expect.objectContaining({
+        name: "Running",
+        scoring: { type: "fixed", points: 5 },
+      }),
+    );
+    expect(
+      mocks.doc.mock.calls.some((call) => call.includes("activityLogs")),
+    ).toBe(false);
+    expect(createBatchCommit).toHaveBeenCalledTimes(1);
+    expect(copyBatchCommit).toHaveBeenCalledTimes(1);
   });
 
   it("marks a participant removed and removes them from challenge members", async () => {

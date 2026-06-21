@@ -45,6 +45,7 @@ This role is not required for the first version, but may be useful later for glo
 - The creator is stored as competition admin.
 - Competition starts with no teams or with optional initial teams.
 - Admin can choose an activity rule set template, such as the rules from `rules.pdf`.
+- Admin can copy an existing competition into a new one. The copy should include active participants, their team assignments, teams, and activity rules, but no activity logs, so all copied participant and team points start at 0.
 
 ### Invitation and Enrollment
 

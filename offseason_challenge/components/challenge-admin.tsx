@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useSignedInUser } from "@/components/auth-shell";
 import {
   assignTeam,
+  copyChallenge,
   createActivityLog,
   createActivityRule,
   createChallenge,
@@ -175,6 +176,47 @@ export function ChallengeAdmin({
       onChallengeDeleted();
     } catch (deleteError) {
       setError(getMessage(deleteError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCopyChallenge = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedChallenge) {
+      return;
+    }
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get("copyChallengeName") ?? "").trim();
+    const description = String(formData.get("copyChallengeDescription") ?? "").trim();
+    const startsAt = String(formData.get("copyStartsAt") ?? "");
+    const endsAt = String(formData.get("copyEndsAt") ?? "");
+
+    if (!name || !startsAt || !endsAt) {
+      setError("Add a copied challenge name and both dates.");
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      const challengeId = await copyChallenge(user, {
+        sourceChallenge: selectedChallenge,
+        detail,
+        name,
+        description,
+        startsAt,
+        endsAt,
+      });
+      onChallengeCreated(challengeId);
+      form.reset();
+      setActivePane("challenge");
+    } catch (copyError) {
+      setError(getMessage(copyError));
     } finally {
       setIsSaving(false);
     }
@@ -490,6 +532,7 @@ export function ChallengeAdmin({
               onCreateActivity={handleCreateActivity}
               onCreateInvite={handleCreateInvite}
               onCreateTeam={handleCreateTeam}
+              onCopyChallenge={handleCopyChallenge}
               onDeleteActivity={handleDeleteActivity}
               onDeleteChallenge={handleDeleteChallenge}
               onRemoveParticipant={handleRemoveParticipant}
@@ -590,6 +633,7 @@ function AdminPane({
   onCreateActivity,
   onCreateInvite,
   onCreateTeam,
+  onCopyChallenge,
   onDeleteActivity,
   onDeleteChallenge,
   onRemoveParticipant,
@@ -608,6 +652,7 @@ function AdminPane({
   onCreateActivity: (event: FormEvent<HTMLFormElement>) => void;
   onCreateInvite: (event: FormEvent<HTMLFormElement>) => void;
   onCreateTeam: (event: FormEvent<HTMLFormElement>) => void;
+  onCopyChallenge: (event: FormEvent<HTMLFormElement>) => void;
   onDeleteActivity: (activityRule: ActivityRule) => void;
   onDeleteChallenge: () => void;
   onRemoveParticipant: (member: Member) => void;
@@ -709,6 +754,15 @@ function AdminPane({
         onAssignTeam={onAssignTeam}
         onRemoveParticipant={onRemoveParticipant}
         teams={teams}
+      />
+
+      <CopyChallengePanel
+        activityRuleCount={activityRules.length}
+        isSaving={isSaving}
+        memberCount={members.filter((member) => member.status === "active").length}
+        onCopyChallenge={onCopyChallenge}
+        selectedChallenge={selectedChallenge}
+        teamCount={teams.length}
       />
 
       <section className="panel flex flex-col gap-3 border-danger/20">
@@ -1194,6 +1248,81 @@ function MemberPanel({
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function CopyChallengePanel({
+  activityRuleCount,
+  isSaving,
+  memberCount,
+  onCopyChallenge,
+  selectedChallenge,
+  teamCount,
+}: {
+  activityRuleCount: number;
+  isSaving: boolean;
+  memberCount: number;
+  onCopyChallenge: (event: FormEvent<HTMLFormElement>) => void;
+  selectedChallenge: Challenge | null;
+  teamCount: number;
+}) {
+  const currentYear = new Date().getFullYear();
+  const defaultName = selectedChallenge
+    ? `${selectedChallenge.name} ${currentYear + 1}`
+    : "";
+  const defaultDescription = selectedChallenge?.description ?? "";
+
+  return (
+    <section className="panel flex min-w-0 flex-col gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">Next Challenge</p>
+          <h2 className="text-lg font-bold uppercase tracking-wider text-brand-strong">
+            Copy setup
+          </h2>
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:w-auto">
+          <Metric label="Teams" value={String(teamCount)} />
+          <Metric label="Members" value={String(memberCount)} />
+          <Metric label="Activities" value={String(activityRuleCount)} />
+        </div>
+      </div>
+      <p className="text-sm font-medium text-muted">
+        Creates a new challenge with the same teams, active members, team assignments, and activities. Activity logs are not copied, so all points start at 0.
+      </p>
+      <form className="grid gap-4" onSubmit={onCopyChallenge}>
+        <label>
+          <span>New challenge name</span>
+          <input
+            defaultValue={defaultName}
+            maxLength={80}
+            name="copyChallengeName"
+            required
+          />
+        </label>
+        <label>
+          <span>Description</span>
+          <input
+            defaultValue={defaultDescription}
+            maxLength={240}
+            name="copyChallengeDescription"
+          />
+        </label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label>
+            <span>Starts At</span>
+            <input name="copyStartsAt" required type="date" />
+          </label>
+          <label>
+            <span>Ends At</span>
+            <input name="copyEndsAt" required type="date" />
+          </label>
+        </div>
+        <button className="button-primary w-fit" disabled={isSaving} type="submit">
+          {isSaving ? "Copying..." : "Copy challenge"}
+        </button>
+      </form>
     </section>
   );
 }

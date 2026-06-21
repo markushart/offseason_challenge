@@ -41,6 +41,7 @@ Stores platform-level profile data. Competition-specific roles and team membersh
   "status": "draft",
   "startsAt": "timestamp",
   "endsAt": "timestamp",
+  "copiedFrom": "competitionId",
   "settings": {
     "activityApprovalMode": "auto",
     "proofRequired": false,
@@ -51,6 +52,8 @@ Stores platform-level profile data. Competition-specific roles and team membersh
   "updatedAt": "serverTimestamp"
 }
 ```
+
+`copiedFrom` is optional and is set when an admin creates a new competition by copying an existing one. The copy operation creates fresh team, member, and activity rule documents under the new competition, but does not copy `activityLogs`; standings therefore start from zero points.
 
 Suggested statuses:
 
