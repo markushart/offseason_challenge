@@ -795,22 +795,6 @@ export async function deleteActivityLog(
   );
 }
 
-export async function setActivityRuleEnabled(
-  competitionId: string,
-  activityRuleId: string,
-  enabled: boolean,
-) {
-  const firestore = assertDb();
-
-  await updateDoc(
-    doc(firestore, "competitions", competitionId, "activityRules", activityRuleId),
-    {
-      enabled,
-      updatedAt: serverTimestamp(),
-    },
-  );
-}
-
 export async function createActivityLog(input: CreateActivityLogInput) {
   const firestore = assertDb();
   const points = input.activityRule.scoring.points;

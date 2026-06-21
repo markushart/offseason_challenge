@@ -16,7 +16,6 @@ import {
   listenChallenge,
   listenChallengeDetail,
   removeParticipant,
-  setActivityRuleEnabled,
   updateChallenge,
   type ActivityRule,
   type Challenge,
@@ -313,24 +312,6 @@ export function ChallengeAdmin({
     }
   };
 
-  const handleToggleActivity = async (activityRule: ActivityRule) => {
-    if (!selectedChallenge) {
-      return;
-    }
-
-    setError(null);
-
-    try {
-      await setActivityRuleEnabled(
-        selectedChallenge.id,
-        activityRule.id,
-        !activityRule.enabled,
-      );
-    } catch (updateError) {
-      setError(getMessage(updateError));
-    }
-  };
-
   const handleDeleteActivity = async (activityRule: ActivityRule) => {
     if (!selectedChallenge) {
       return;
@@ -562,7 +543,6 @@ export function ChallengeAdmin({
               onDeleteChallenge={handleDeleteChallenge}
               onRemoveParticipant={handleRemoveParticipant}
               onToggleEdit={() => setIsEditing((current) => !current)}
-              onToggleActivity={handleToggleActivity}
               onUpdateChallenge={handleUpdateChallenge}
               teams={detail.teams}
               selectedChallenge={selectedChallenge}
@@ -675,7 +655,6 @@ function AdminPane({
   onDeleteChallenge,
   onRemoveParticipant,
   onToggleEdit,
-  onToggleActivity,
   onUpdateChallenge,
   selectedChallenge,
   teams,
@@ -694,7 +673,6 @@ function AdminPane({
   onDeleteChallenge: () => void;
   onRemoveParticipant: (member: Member) => void;
   onToggleEdit: () => void;
-  onToggleActivity: (activityRule: ActivityRule) => void;
   onUpdateChallenge: (event: FormEvent<HTMLFormElement>) => void;
   selectedChallenge: Challenge | null;
   teams: Team[];
@@ -781,7 +759,6 @@ function AdminPane({
           isSaving={isSaving}
           onCreateActivity={onCreateActivity}
           onDeleteActivity={onDeleteActivity}
-          onToggleActivity={onToggleActivity}
         />
       </div>
 
@@ -1388,13 +1365,11 @@ function ActivityPanel({
   isSaving,
   onCreateActivity,
   onDeleteActivity,
-  onToggleActivity,
 }: {
   activityRules: ActivityRule[];
   isSaving: boolean;
   onCreateActivity: (event: FormEvent<HTMLFormElement>) => void;
   onDeleteActivity: (activityRule: ActivityRule) => void;
-  onToggleActivity: (activityRule: ActivityRule) => void;
 }) {
   return (
     <section className="panel flex min-w-0 flex-col gap-4">
@@ -1445,17 +1420,6 @@ function ActivityPanel({
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  className={`rounded-lg px-3 py-1 text-[11px] font-black uppercase tracking-widest transition ${
-                    activityRule.enabled
-                      ? "bg-ok/10 text-ok border border-ok/20"
-                      : "bg-muted/10 text-muted border border-muted/20"
-                  }`}
-                  onClick={() => onToggleActivity(activityRule)}
-                  type="button"
-                >
-                  {activityRule.enabled ? "Active" : "Paused"}
-                </button>
                 <button
                   className="rounded-lg border border-danger/30 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={isSaving}

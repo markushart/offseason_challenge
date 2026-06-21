@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   listenChallenge: vi.fn(),
   listenChallengeDetail: vi.fn(),
   removeParticipant: vi.fn(),
-  setActivityRuleEnabled: vi.fn(),
 }));
 
 vi.mock("@/components/auth-shell", () => ({
@@ -45,7 +44,6 @@ vi.mock("@/lib/challenges", () => ({
   listenChallenge: mocks.listenChallenge,
   listenChallengeDetail: mocks.listenChallengeDetail,
   removeParticipant: mocks.removeParticipant,
-  setActivityRuleEnabled: mocks.setActivityRuleEnabled,
 }));
 
 describe("ChallengeAdmin", () => {
@@ -62,7 +60,6 @@ describe("ChallengeAdmin", () => {
     mocks.deleteActivityRule.mockResolvedValue(undefined);
     mocks.deleteChallenge.mockResolvedValue(undefined);
     mocks.removeParticipant.mockResolvedValue(undefined);
-    mocks.setActivityRuleEnabled.mockResolvedValue(undefined);
 
     mocks.listenChallenge.mockImplementation((_id, onData) => {
       onData({
