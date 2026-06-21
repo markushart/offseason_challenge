@@ -11,6 +11,8 @@
 - The Challenge pane shows standings, recent activity, and member activity submission from enabled fixed-point rules.
 - The Admin pane manages challenge teams, one reusable invite link, fixed-point activity rules, participant team assignment, participant removal, and challenge archiving.
 - Challenge details and date edits are restricted to the Admin pane.
+- Admins and activity owners can remove mistaken activity log entries.
+- Admin activity creation currently asks for activity name and fixed points only; category and proof-required controls are hidden.
 - Team standings can be expanded to show per-participant scores under each team.
 - Signed-in users can switch between joined challenges from a dashboard sidebar/mobile selector.
 - Invite links with `?join=CODE` are supported and can auto-join a signed-in user to a challenge.
@@ -44,6 +46,7 @@
 - Fixed challenge pane for non-admin users to show total team scores and rankings (previously only showed self-points).
 - Fixed "Join Challenge" permission error where users couldn't read their own member profile before joining.
 - Added member activity submission with completion dates.
+- Added deletion of mistaken activity entries by the submitting member or competition admin.
 - Added recent activity feed and standings from accepted activity logs.
 - Added admin removal of activity rules.
 - Updated standings to calculate team points from each active member's current team assignment, so points follow a participant after team assignment.

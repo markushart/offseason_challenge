@@ -3,6 +3,7 @@ import {
   copyChallenge,
   createActivityLog,
   createInvite,
+  deleteActivityLog,
   deleteActivityRule,
   deleteChallenge,
   joinChallenge,
@@ -123,6 +124,19 @@ describe("joinChallenge", () => {
       "competition-1",
       "activityRules",
       "rule-1",
+    );
+    expect(mocks.deleteDoc).toHaveBeenCalledWith("member-ref");
+  });
+
+  it("deletes an activity log document", async () => {
+    await deleteActivityLog("competition-1", "log-1");
+
+    expect(mocks.doc).toHaveBeenCalledWith(
+      {},
+      "competitions",
+      "competition-1",
+      "activityLogs",
+      "log-1",
     );
     expect(mocks.deleteDoc).toHaveBeenCalledWith("member-ref");
   });

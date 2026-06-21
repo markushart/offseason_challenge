@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createChallenge: vi.fn(),
   createInvite: vi.fn(),
   createTeam: vi.fn(),
+  deleteActivityLog: vi.fn(),
   deleteActivityRule: vi.fn(),
   deleteChallenge: vi.fn(),
   listenChallenge: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@/lib/challenges", () => ({
   createChallenge: mocks.createChallenge,
   createInvite: mocks.createInvite,
   createTeam: mocks.createTeam,
+  deleteActivityLog: mocks.deleteActivityLog,
   deleteActivityRule: mocks.deleteActivityRule,
   deleteChallenge: mocks.deleteChallenge,
   listenChallenge: mocks.listenChallenge,
@@ -56,6 +58,7 @@ describe("ChallengeAdmin", () => {
     mocks.createChallenge.mockResolvedValue("challenge-1");
     mocks.createInvite.mockResolvedValue(undefined);
     mocks.createTeam.mockResolvedValue(undefined);
+    mocks.deleteActivityLog.mockResolvedValue(undefined);
     mocks.deleteActivityRule.mockResolvedValue(undefined);
     mocks.deleteChallenge.mockResolvedValue(undefined);
     mocks.removeParticipant.mockResolvedValue(undefined);
@@ -408,6 +411,174 @@ describe("ChallengeAdmin", () => {
 
     await waitFor(() => {
       expect(mocks.deleteActivityRule).toHaveBeenCalledWith("challenge-1", "rule-1");
+    });
+  });
+
+  it("creates activities from name and points only", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Summer Challenge");
+    await user.click(screen.getByRole("button", { name: /^admin$/i }));
+    expect(screen.queryByLabelText(/category/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/requires proof/i)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/activity name/i), "Running");
+    await user.type(screen.getByLabelText(/points/i), "5");
+    await user.click(screen.getByRole("button", { name: /^add activity$/i }));
+
+    await waitFor(() => {
+      expect(mocks.createActivityRule).toHaveBeenCalledWith({
+        competitionId: "challenge-1",
+        name: "Running",
+        category: "custom",
+        points: 5,
+        requiresProof: false,
+      });
+    });
+  });
+
+  it("lets admins remove mistaken activity entries", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-1",
+            displayNameSnapshot: "Admin User",
+            emailSnapshot: "admin@example.com",
+            teamId: null,
+            role: "admin",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+        activityLogs: [
+          {
+            id: "log-1",
+            userId: "user-2",
+            teamId: null,
+            activityRuleId: "rule-1",
+            activityNameSnapshot: "Running",
+            activityDate: new Date("2026-06-05"),
+            calculatedPoints: 5,
+            finalPoints: 5,
+            status: "accepted",
+            createdAt: null,
+          },
+        ],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Running");
+    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+
+    await waitFor(() => {
+      expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
+    });
+  });
+
+  it("lets members remove their own mistaken activity entries", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.listenChallenge.mockImplementation((_id, onData) => {
+      onData({
+        id: "challenge-1",
+        name: "Summer Challenge",
+        description: "Preseason setup",
+        status: "active",
+        adminIds: ["admin-1"],
+        createdBy: "admin-1",
+        startsAt: new Date("2026-06-01"),
+        endsAt: new Date("2026-08-31"),
+      });
+
+      return vi.fn();
+    });
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-1",
+            displayNameSnapshot: "Player One",
+            emailSnapshot: "player@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+        activityLogs: [
+          {
+            id: "log-1",
+            userId: "user-1",
+            teamId: null,
+            activityRuleId: "rule-1",
+            activityNameSnapshot: "Running",
+            activityDate: new Date("2026-06-05"),
+            calculatedPoints: 5,
+            finalPoints: 5,
+            status: "accepted",
+            createdAt: null,
+          },
+          {
+            id: "log-2",
+            userId: "user-2",
+            teamId: null,
+            activityRuleId: "rule-1",
+            activityNameSnapshot: "Cycling",
+            activityDate: new Date("2026-06-06"),
+            calculatedPoints: 3,
+            finalPoints: 3,
+            status: "accepted",
+            createdAt: null,
+          },
+        ],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Running");
+    expect(screen.getByText("Cycling")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^remove$/i })).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+
+    await waitFor(() => {
+      expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
     });
   });
 

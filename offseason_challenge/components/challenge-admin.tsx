@@ -10,6 +10,7 @@ import {
   createChallenge,
   createInvite,
   createTeam,
+  deleteActivityLog,
   deleteActivityRule,
   deleteChallenge,
   listenChallenge,
@@ -286,9 +287,7 @@ export function ChallengeAdmin({
     const form = event.currentTarget;
     const formData = new FormData(form);
     const name = String(formData.get("activityName") ?? "").trim();
-    const category = String(formData.get("activityCategory") ?? "").trim();
     const points = Number(formData.get("activityPoints") ?? 0);
-    const requiresProof = formData.get("requiresProof") === "on";
 
     if (!name || !Number.isInteger(points) || points < 1 || points > 50) {
       setError("Add an activity name and points between 1 and 50.");
@@ -302,9 +301,9 @@ export function ChallengeAdmin({
       await createActivityRule({
         competitionId: selectedChallenge.id,
         name,
-        category,
+        category: "custom",
         points,
-        requiresProof,
+        requiresProof: false,
       });
       form.reset();
     } catch (createError) {
@@ -348,6 +347,31 @@ export function ChallengeAdmin({
 
     try {
       await deleteActivityRule(selectedChallenge.id, activityRule.id);
+    } catch (deleteError) {
+      setError(getMessage(deleteError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteActivityLog = async (activityLog: ActivityLog) => {
+    if (!selectedChallenge) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remove "${activityLog.activityNameSnapshot}" from recent activity?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await deleteActivityLog(selectedChallenge.id, activityLog.id);
     } catch (deleteError) {
       setError(getMessage(deleteError));
     } finally {
@@ -449,10 +473,9 @@ export function ChallengeAdmin({
         </div>
 
         {selectedChallenge && (
-          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 lg:flex">
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2 lg:flex">
             <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
             <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
-            <Metric label="Teams" value={String(detail.teams.length)} />
           </div>
         )}
       </header>
@@ -516,9 +539,11 @@ export function ChallengeAdmin({
               activityLogs={detail.activityLogs}
               activityRules={detail.activityRules}
               currentMember={currentMember}
+              isAdmin={Boolean(isAdmin)}
               isSaving={isSaving}
               members={detail.members}
               onCreateActivityLog={handleCreateActivityLog}
+              onDeleteActivityLog={handleDeleteActivityLog}
               teams={detail.teams}
             />
           ) : (
@@ -549,9 +574,11 @@ export function ChallengeAdmin({
           activityLogs={detail.activityLogs}
           activityRules={detail.activityRules}
           currentMember={currentMember}
+          isAdmin={Boolean(isAdmin)}
           isSaving={isSaving}
           members={detail.members}
           onCreateActivityLog={handleCreateActivityLog}
+          onDeleteActivityLog={handleDeleteActivityLog}
           teams={detail.teams}
         />
       ) : null}
@@ -590,17 +617,21 @@ function ChallengePane({
   activityLogs,
   activityRules,
   currentMember,
+  isAdmin,
   isSaving,
   members,
   onCreateActivityLog,
+  onDeleteActivityLog,
   teams,
 }: {
   activityLogs: ActivityLog[];
   activityRules: ActivityRule[];
   currentMember: Member | undefined;
+  isAdmin: boolean;
   isSaving: boolean;
   members: Member[];
   onCreateActivityLog: (event: FormEvent<HTMLFormElement>) => void;
+  onDeleteActivityLog: (activityLog: ActivityLog) => void;
   teams: Team[];
 }) {
   return (
@@ -617,7 +648,13 @@ function ChallengePane({
           isSaving={isSaving}
           onCreateActivityLog={onCreateActivityLog}
         />
-        <ActivityFeedPanel activityLogs={activityLogs} />
+        <ActivityFeedPanel
+          activityLogs={activityLogs}
+          currentUserId={currentMember?.userId}
+          isAdmin={isAdmin}
+          isSaving={isSaving}
+          onDeleteActivityLog={onDeleteActivityLog}
+        />
       </div>
     </div>
   );
@@ -762,7 +799,6 @@ function AdminPane({
         memberCount={members.filter((member) => member.status === "active").length}
         onCopyChallenge={onCopyChallenge}
         selectedChallenge={selectedChallenge}
-        teamCount={teams.length}
       />
 
       <section className="panel flex flex-col gap-3 border-danger/20">
@@ -855,8 +891,7 @@ function ChallengeOverview({
           <p className="eyebrow">Team Progress</p>
           <h2 className="text-2xl font-bold text-brand-strong">Standings</h2>
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
-          <Metric label="Teams" value={String(teams.length)} />
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto">
           <Metric label="Members" value={String(activeMembers.length)} />
         </div>
       </div>
@@ -1009,7 +1044,19 @@ function ActivitySubmissionPanel({
   );
 }
 
-function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
+function ActivityFeedPanel({
+  activityLogs,
+  currentUserId,
+  isAdmin,
+  isSaving,
+  onDeleteActivityLog,
+}: {
+  activityLogs: ActivityLog[];
+  currentUserId: string | undefined;
+  isAdmin: boolean;
+  isSaving: boolean;
+  onDeleteActivityLog: (activityLog: ActivityLog) => void;
+}) {
   const recentLogs = activityLogs.slice(0, 8);
 
   return (
@@ -1037,9 +1084,21 @@ function ActivityFeedPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
                     {activityLog.activityDate?.toLocaleDateString() ?? "No date"}
                   </p>
                 </div>
-                <strong className="text-lg font-black text-brand-strong">
-                  {activityLog.finalPoints}
-                </strong>
+                <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                  <strong className="text-lg font-black text-brand-strong">
+                    {activityLog.finalPoints}
+                  </strong>
+                  {isAdmin || activityLog.userId === currentUserId ? (
+                    <button
+                      className="rounded border border-danger/30 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isSaving}
+                      onClick={() => onDeleteActivityLog(activityLog)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           ))}
@@ -1258,14 +1317,12 @@ function CopyChallengePanel({
   memberCount,
   onCopyChallenge,
   selectedChallenge,
-  teamCount,
 }: {
   activityRuleCount: number;
   isSaving: boolean;
   memberCount: number;
   onCopyChallenge: (event: FormEvent<HTMLFormElement>) => void;
   selectedChallenge: Challenge | null;
-  teamCount: number;
 }) {
   const currentYear = new Date().getFullYear();
   const defaultName = selectedChallenge
@@ -1282,8 +1339,7 @@ function CopyChallengePanel({
             Copy setup
           </h2>
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:w-auto">
-          <Metric label="Teams" value={String(teamCount)} />
+        <div className="grid grid-cols-2 gap-2 sm:w-auto">
           <Metric label="Members" value={String(memberCount)} />
           <Metric label="Activities" value={String(activityRuleCount)} />
         </div>
@@ -1352,28 +1408,14 @@ function ActivityPanel({
             placeholder="Running / Jogging"
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-[1fr_90px]">
-          <label>
-            <span>Category</span>
-            <input
-              maxLength={40}
-              name="activityCategory"
-              placeholder="running"
-            />
-          </label>
-          <label>
-            <span>Points</span>
-            <input
-              max={50}
-              min={1}
-              name="activityPoints"
-              type="number"
-            />
-          </label>
-        </div>
-        <label className="flex min-h-[46px] items-center gap-3 rounded-lg border border-line px-3 bg-white">
-          <input className="h-5 w-5 accent-brand" name="requiresProof" type="checkbox" />
-          <span className="text-sm font-bold text-muted">Requires proof</span>
+        <label>
+          <span>Points</span>
+          <input
+            max={50}
+            min={1}
+            name="activityPoints"
+            type="number"
+          />
         </label>
         <button
           className="button-primary"
@@ -1399,7 +1441,7 @@ function ActivityPanel({
               <div className="min-w-0">
                 <p className="font-bold text-brand-strong truncate">{activityRule.name}</p>
                 <p className="mt-1 text-xs font-extrabold text-muted uppercase tracking-wider">
-                  {activityRule.category} · {activityRule.scoring.points} pts
+                  {activityRule.scoring.points} pts
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -1424,9 +1466,6 @@ function ActivityPanel({
                 </button>
               </div>
             </div>
-            {activityRule.requiresProof ? (
-              <p className="mt-2 text-[10px] font-black uppercase tracking-tighter text-accent">Proof required</p>
-            ) : null}
           </div>
         ))}
       </div>

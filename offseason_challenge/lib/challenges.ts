@@ -784,6 +784,17 @@ export async function deleteActivityRule(
   );
 }
 
+export async function deleteActivityLog(
+  competitionId: string,
+  activityLogId: string,
+) {
+  const firestore = assertDb();
+
+  await deleteDoc(
+    doc(firestore, "competitions", competitionId, "activityLogs", activityLogId),
+  );
+}
+
 export async function setActivityRuleEnabled(
   competitionId: string,
   activityRuleId: string,

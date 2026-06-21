@@ -68,6 +68,7 @@ This role is not required for the first version, but may be useful later for glo
 - Participant enters required values, such as date, duration, intensity, or notes.
 - App calculates suggested points from the activity rule.
 - Activity is submitted as accepted automatically or as pending review, depending on competition settings.
+- The participant who submitted an activity, or a competition admin, can remove a mistaken activity entry.
 - Admin can approve, reject, or adjust entries if moderation is enabled.
 
 ## Scoring Rules From `rules.pdf`

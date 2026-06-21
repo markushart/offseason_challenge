@@ -305,6 +305,8 @@ The current UI writes the fixed-point completion subset first:
 
 Members add their own activity logs by selecting an enabled competition activity rule and the date they completed it. The log stores the member's `teamId` at submission time for audit context, but current standings intentionally sum points by the member's current team assignment. If a member logs activity while unassigned and is assigned to a team later, those points count for the new team immediately.
 
+Mistaken activity entries can be deleted by the user who submitted the log or by a competition admin. Because standings are calculated from existing accepted logs, deleting an activity log removes its points from participant and team totals.
+
 ## Security Rule Intent
 
 - Users can read competitions where they are members.
