@@ -433,6 +433,6 @@ describe("joinChallenge", () => {
         "abc123",
         "Player One",
       ),
-    ).rejects.toThrow("This invite has been disabled.");
+    ).rejects.toThrow("Diese Einladung wurde deaktiviert.");
   });
 });

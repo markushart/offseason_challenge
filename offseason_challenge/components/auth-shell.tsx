@@ -27,25 +27,25 @@ type AuthShellProps = {
 const getAuthMessage = (error: unknown) => {
   if (error instanceof Error) {
     if (error.message.includes("auth/email-already-in-use")) {
-      return "An account already exists for this email. Sign in instead.";
+      return "Fuer diese E-Mail gibt es bereits ein Konto. Melde dich stattdessen an.";
     }
 
     if (error.message.includes("auth/invalid-credential")) {
-      return "Email or password is incorrect.";
+      return "E-Mail oder Passwort ist falsch.";
     }
 
     if (error.message.includes("auth/weak-password")) {
-      return "Use a password with at least 6 characters.";
+      return "Verwende ein Passwort mit mindestens 6 Zeichen.";
     }
 
     if (error.message.includes("auth/operation-not-allowed")) {
-      return "Email/password sign-in is not enabled for this Firebase project.";
+      return "E-Mail/Passwort-Anmeldung ist fuer dieses Firebase-Projekt nicht aktiviert.";
     }
 
     return error.message;
   }
 
-  return "Sign-in failed. Please try again.";
+  return "Anmeldung fehlgeschlagen. Bitte versuche es erneut.";
 };
 
 const SignedInUserContext = createContext<User | null>(null);
@@ -54,7 +54,7 @@ export function useSignedInUser() {
   const user = useContext(SignedInUserContext);
 
   if (!user) {
-    throw new Error("useSignedInUser must be used below AuthShell.");
+    throw new Error("useSignedInUser muss unterhalb von AuthShell verwendet werden.");
   }
 
   return user;
@@ -86,7 +86,7 @@ export function AuthShell({ children }: AuthShellProps) {
 
   const handleGoogleSignUp = async () => {
     if (!auth) {
-      setError("Firebase is not configured yet. Add your values to .env.local.");
+      setError("Firebase ist noch nicht konfiguriert. Ergaenze deine Werte in .env.local.");
       return;
     }
 
@@ -106,7 +106,7 @@ export function AuthShell({ children }: AuthShellProps) {
     event.preventDefault();
 
     if (!auth) {
-      setError("Firebase is not configured yet. Add your values to .env.local.");
+      setError("Firebase ist noch nicht konfiguriert. Ergaenze deine Werte in .env.local.");
       return;
     }
 
@@ -116,12 +116,12 @@ export function AuthShell({ children }: AuthShellProps) {
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (!email || !password) {
-      setError("Add an email and password.");
+      setError("E-Mail und Passwort eingeben.");
       return;
     }
 
     if (authMode === "create" && password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Die Passwoerter stimmen nicht ueberein.");
       return;
     }
 
@@ -153,7 +153,7 @@ export function AuthShell({ children }: AuthShellProps) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4 text-zinc-950">
         <div className="rounded-lg border border-zinc-200 bg-white p-5 text-sm font-medium shadow-sm">
-          Loading account state...
+          Konto wird geladen...
         </div>
       </main>
     );
@@ -168,19 +168,19 @@ export function AuthShell({ children }: AuthShellProps) {
               Offseason Challenge
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-normal sm:text-5xl">
-              Sign up for your team challenge.
+              Melde dich fuer deine Team-Challenge an.
             </h1>
             <p className="mt-3 max-w-xl text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
-              Create your account, then manage trainings, activities,
-              proof uploads, and team standings from your phone.
+              Erstelle dein Konto und verwalte Training, Aktivitaeten
+              und Teamwertung direkt vom Handy.
             </p>
           </div>
 
           <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-xl font-semibold">Enter the challenge</h2>
+            <h2 className="text-xl font-semibold">Challenge starten</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Sign in with Google or use your email and password. Team
-              membership and activity logs connect to your Firebase user ID.
+              Melde dich mit Google oder mit E-Mail und Passwort an. Teamzuordnung
+              und Aktivitaeten werden mit deinem Firebase-Konto verknuepft.
             </p>
 
             <div className="mt-5 grid grid-cols-2 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
@@ -196,7 +196,7 @@ export function AuthShell({ children }: AuthShellProps) {
                 }}
                 type="button"
               >
-                Sign in
+                Anmelden
               </button>
               <button
                 className={`h-10 rounded-md text-sm font-semibold transition ${
@@ -210,13 +210,13 @@ export function AuthShell({ children }: AuthShellProps) {
                 }}
                 type="button"
               >
-                Create account
+                Konto erstellen
               </button>
             </div>
 
             <form className="mt-5 grid gap-3" onSubmit={handleEmailAuth}>
               <label className="grid gap-1">
-                <span className="text-sm font-semibold text-zinc-700">Email</span>
+                <span className="text-sm font-semibold text-zinc-700">E-Mail</span>
                 <input
                   autoComplete="email"
                   className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
@@ -227,7 +227,7 @@ export function AuthShell({ children }: AuthShellProps) {
                 />
               </label>
               <label className="grid gap-1">
-                <span className="text-sm font-semibold text-zinc-700">Password</span>
+                <span className="text-sm font-semibold text-zinc-700">Passwort</span>
                 <input
                   autoComplete={authMode === "create" ? "new-password" : "current-password"}
                   className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
@@ -239,7 +239,7 @@ export function AuthShell({ children }: AuthShellProps) {
               </label>
               {authMode === "create" ? (
                 <label className="grid gap-1">
-                  <span className="text-sm font-semibold text-zinc-700">Confirm password</span>
+                  <span className="text-sm font-semibold text-zinc-700">Passwort bestaetigen</span>
                   <input
                     autoComplete="new-password"
                     className="h-11 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-600"
@@ -256,10 +256,10 @@ export function AuthShell({ children }: AuthShellProps) {
                 type="submit"
               >
                 {isSigningIn
-                  ? "Working..."
+                  ? "Bitte warten..."
                   : authMode === "create"
-                    ? "Create account"
-                    : "Sign in with email"}
+                    ? "Konto erstellen"
+                    : "Mit E-Mail anmelden"}
               </button>
             </form>
 
@@ -272,13 +272,13 @@ export function AuthShell({ children }: AuthShellProps) {
               <span className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-base font-semibold">
                 G
               </span>
-              {isSigningIn ? "Opening Google..." : "Continue with Google"}
+              {isSigningIn ? "Google wird geoeffnet..." : "Mit Google fortfahren"}
             </button>
 
             {!hasFirebaseConfig ? (
               <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Firebase config is missing. Copy .env.example to .env.local and
-                fill in the web app values from Firebase Console.
+                Firebase-Konfiguration fehlt. Kopiere .env.example nach .env.local und
+                trage die Web-App-Werte aus der Firebase Console ein.
               </p>
             ) : null}
 
@@ -302,7 +302,7 @@ export function AuthShell({ children }: AuthShellProps) {
               {(user.displayName ?? user.email ?? "U").slice(0, 1)}
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Signed in as</p>
+              <p className="text-sm text-zinc-500">Angemeldet als</p>
               <p className="font-semibold">{user.displayName ?? user.email}</p>
             </div>
           </div>
@@ -311,7 +311,7 @@ export function AuthShell({ children }: AuthShellProps) {
             onClick={handleSignOut}
             type="button"
           >
-            Sign out
+            Abmelden
           </button>
         </div>
       </header>

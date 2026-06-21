@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Offseason Challenge",
-  description: "Team competition dashboard for offseason training points.",
+  description: "Team-Wettkampf-Dashboard fuer Trainingspunkte in der Offseason.",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
