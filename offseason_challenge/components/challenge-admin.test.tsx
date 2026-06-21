@@ -105,21 +105,21 @@ describe("ChallengeAdmin", () => {
 
     // Wait for the challenge title to appear
     await screen.findByText("Summer Challenge");
-    expect(screen.queryByRole("button", { name: /edit details/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /details bearbeiten/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
-    expect(screen.getByRole("button", { name: /edit details/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /details bearbeiten/i })).toBeInTheDocument();
 
-    const teamNameInput = screen.getByLabelText(/team name/i);
+    const teamNameInput = screen.getByLabelText(/teamname/i);
     await user.type(teamNameInput, "Team Red");
     
     // In our new UI, color is an input type="color"
-    const colorInput = screen.getByLabelText(/color/i);
+    const colorInput = screen.getByLabelText(/farbe/i);
     // userEvent.type doesn't work well with type="color" in jsdom usually, 
     // but we can at least check if it exists and change its value.
     // However, userEvent.selectOptions definitely won't work.
     vi.mocked(colorInput).value = "#dc2626";
     
-    await user.click(screen.getByRole("button", { name: /^add team$/i }));
+    await user.click(screen.getByRole("button", { name: /^team hinzufuegen$/i }));
 
     await waitFor(() => {
       expect(mocks.createTeam).toHaveBeenCalledWith({
@@ -150,7 +150,7 @@ describe("ChallengeAdmin", () => {
 
     await screen.findByText("Summer Challenge");
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
-    await user.click(screen.getByRole("button", { name: /^delete challenge$/i }));
+    await user.click(screen.getByRole("button", { name: /^challenge loeschen$/i }));
 
     await waitFor(() => {
       expect(mocks.deleteChallenge).toHaveBeenCalledWith("challenge-1");
@@ -225,11 +225,11 @@ describe("ChallengeAdmin", () => {
 
     await screen.findByText("Summer Challenge");
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
-    await user.clear(screen.getByLabelText(/new challenge name/i));
-    await user.type(screen.getByLabelText(/new challenge name/i), "Summer Challenge 2027");
-    await user.type(screen.getByLabelText(/^starts at$/i), "2027-06-01");
-    await user.type(screen.getByLabelText(/^ends at$/i), "2027-08-31");
-    await user.click(screen.getByRole("button", { name: /^copy challenge$/i }));
+    await user.clear(screen.getByLabelText(/name der neuen challenge/i));
+    await user.type(screen.getByLabelText(/name der neuen challenge/i), "Summer Challenge 2027");
+    await user.type(screen.getByLabelText(/^start$/i), "2027-06-01");
+    await user.type(screen.getByLabelText(/^ende$/i), "2027-08-31");
+    await user.click(screen.getByRole("button", { name: /^challenge kopieren$/i }));
 
     await waitFor(() => {
       expect(mocks.copyChallenge).toHaveBeenCalledWith(
@@ -316,13 +316,13 @@ describe("ChallengeAdmin", () => {
       />,
     );
 
-    expect(await screen.findByText("Standings")).toBeInTheDocument();
+    expect(await screen.findByText("Wertung")).toBeInTheDocument();
     expect(screen.getByText("Team Blue")).toBeInTheDocument();
     expect(screen.getByText("Team Red")).toBeInTheDocument();
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getAllByText("5").length).toBeGreaterThan(0);
-    expect(screen.getByText("1 active member is waiting for a team.")).toBeInTheDocument();
-    expect(screen.queryByText(/points were logged before members received a team/i)).not.toBeInTheDocument();
+    expect(screen.getByText("1 aktive Person wartet auf ein Team.")).toBeInTheDocument();
+    expect(screen.queryByText(/Punkte wurden eingetragen, bevor Mitglieder einem Team zugeordnet waren/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Participant view coming soon. You are currently a member of this team.")).not.toBeInTheDocument();
   });
 
@@ -363,7 +363,7 @@ describe("ChallengeAdmin", () => {
     expect(await screen.findByText("Player One")).toBeInTheDocument();
     expect(screen.queryByText("player@example.com")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+    await user.click(screen.getByRole("button", { name: /^entfernen$/i }));
 
     await waitFor(() => {
       expect(mocks.removeParticipant).toHaveBeenCalledWith("challenge-1", "user-2");
@@ -404,7 +404,7 @@ describe("ChallengeAdmin", () => {
 
     await screen.findByText("Summer Challenge");
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
-    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+    await user.click(screen.getByRole("button", { name: /^entfernen$/i }));
 
     await waitFor(() => {
       expect(mocks.deleteActivityRule).toHaveBeenCalledWith("challenge-1", "rule-1");
@@ -424,12 +424,12 @@ describe("ChallengeAdmin", () => {
 
     await screen.findByText("Summer Challenge");
     await user.click(screen.getByRole("button", { name: /^admin$/i }));
-    expect(screen.queryByLabelText(/category/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/requires proof/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/kategorie/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/nachweis/i)).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/activity name/i), "Running");
-    await user.type(screen.getByLabelText(/points/i), "5");
-    await user.click(screen.getByRole("button", { name: /^add activity$/i }));
+    await user.type(screen.getByLabelText(/aktivitaetsname/i), "Running");
+    await user.type(screen.getByLabelText(/punkte/i), "5");
+    await user.click(screen.getByRole("button", { name: /^aktivitaet hinzufuegen$/i }));
 
     await waitFor(() => {
       expect(mocks.createActivityRule).toHaveBeenCalledWith({
@@ -489,7 +489,7 @@ describe("ChallengeAdmin", () => {
     );
 
     await screen.findByText("Running");
-    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+    await user.click(screen.getByRole("button", { name: /^entfernen$/i }));
 
     await waitFor(() => {
       expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
@@ -570,9 +570,9 @@ describe("ChallengeAdmin", () => {
 
     await screen.findByText("Running");
     expect(screen.getByText("Cycling")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /^remove$/i })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^entfernen$/i })).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: /^remove$/i }));
+    await user.click(screen.getByRole("button", { name: /^entfernen$/i }));
 
     await waitFor(() => {
       expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
@@ -634,11 +634,11 @@ describe("ChallengeAdmin", () => {
       />,
     );
 
-    await screen.findByText("Add completed activity");
-    await user.selectOptions(screen.getByLabelText(/^activity$/i), "rule-1");
-    await user.clear(screen.getByLabelText(/date completed/i));
-    await user.type(screen.getByLabelText(/date completed/i), "2026-06-10");
-    await user.click(screen.getByRole("button", { name: /^add activity$/i }));
+    await screen.findByText("Abgeschlossene Aktivitaet eintragen");
+    await user.selectOptions(screen.getByLabelText(/^aktivitaet$/i), "rule-1");
+    await user.clear(screen.getByLabelText(/datum/i));
+    await user.type(screen.getByLabelText(/datum/i), "2026-06-10");
+    await user.click(screen.getByRole("button", { name: /^aktivitaet eintragen$/i }));
 
     await waitFor(() => {
       expect(mocks.createActivityLog).toHaveBeenCalledWith({

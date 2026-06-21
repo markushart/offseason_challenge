@@ -103,7 +103,7 @@ export function ChallengeAdmin({
     const endsAt = String(formData.get("endsAt") ?? "");
 
     if (!name || !startsAt || !endsAt) {
-      setError("Add a name and both dates.");
+      setError("Name und beide Daten eingeben.");
       return;
     }
 
@@ -161,7 +161,7 @@ export function ChallengeAdmin({
     }
 
     const confirmed = window.confirm(
-      `Delete "${selectedChallenge.name}"? This will remove it from challenge lists.`,
+      `"${selectedChallenge.name}" loeschen? Die Challenge wird aus den Listen entfernt.`,
     );
 
     if (!confirmed) {
@@ -196,7 +196,7 @@ export function ChallengeAdmin({
     const endsAt = String(formData.get("copyEndsAt") ?? "");
 
     if (!name || !startsAt || !endsAt) {
-      setError("Add a copied challenge name and both dates.");
+      setError("Name und beide Daten fuer die kopierte Challenge eingeben.");
       return;
     }
 
@@ -235,7 +235,7 @@ export function ChallengeAdmin({
     const color = String(formData.get("teamColor") ?? teamColors[0]);
 
     if (!name) {
-      setError("Add a team name first.");
+      setError("Bitte zuerst einen Teamnamen eingeben.");
       return;
     }
 
@@ -289,7 +289,7 @@ export function ChallengeAdmin({
     const points = Number(formData.get("activityPoints") ?? 0);
 
     if (!name || !Number.isInteger(points) || points < 1 || points > 50) {
-      setError("Add an activity name and points between 1 and 50.");
+      setError("Aktivitaetsname und Punkte zwischen 1 und 50 eingeben.");
       return;
     }
 
@@ -317,7 +317,7 @@ export function ChallengeAdmin({
       return;
     }
 
-    const confirmed = window.confirm(`Remove "${activityRule.name}" from this challenge?`);
+    const confirmed = window.confirm(`"${activityRule.name}" aus dieser Challenge entfernen?`);
 
     if (!confirmed) {
       return;
@@ -341,7 +341,7 @@ export function ChallengeAdmin({
     }
 
     const confirmed = window.confirm(
-      `Remove "${activityLog.activityNameSnapshot}" from recent activity?`,
+      `"${activityLog.activityNameSnapshot}" aus den letzten Aktivitaeten entfernen?`,
     );
 
     if (!confirmed) {
@@ -368,7 +368,7 @@ export function ChallengeAdmin({
     }
 
     if (!currentMember || currentMember.status !== "active") {
-      setError("You must be an active challenge member to add activity.");
+      setError("Du musst aktives Challenge-Mitglied sein, um Aktivitaeten einzutragen.");
       return;
     }
 
@@ -379,7 +379,7 @@ export function ChallengeAdmin({
     const activityRule = detail.activityRules.find((rule) => rule.id === activityRuleId);
 
     if (!activityRule || !activityRule.enabled || !activityDate) {
-      setError("Select an active activity and date.");
+      setError("Aktivitaet und Datum auswaehlen.");
       return;
     }
 
@@ -416,7 +416,7 @@ export function ChallengeAdmin({
       return;
     }
 
-    const confirmed = window.confirm(`Remove ${member.displayNameSnapshot} from this challenge?`);
+    const confirmed = window.confirm(`${member.displayNameSnapshot} aus dieser Challenge entfernen?`);
 
     if (!confirmed) {
       return;
@@ -439,32 +439,32 @@ export function ChallengeAdmin({
       <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="eyebrow leading-none mb-1">
-            {selectedChallenge ? "Challenge Dashboard" : "Getting Started"}
+            {selectedChallenge ? "Challenge-Uebersicht" : "Loslegen"}
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-brand-strong sm:text-4xl">
-            {selectedChallenge ? selectedChallenge.name : "Create a new challenge"}
+            {selectedChallenge ? selectedChallenge.name : "Neue Challenge erstellen"}
           </h1>
           <div className="mt-2 flex items-center gap-4">
              <p className="max-w-2xl text-base text-muted font-medium">
               {selectedChallenge 
-                ? selectedChallenge.description || "Manage teams, invites, and activities."
-                : "Welcome! Create a new team competition to get started."}
+                ? selectedChallenge.description || "Teams, Einladungen und Aktivitaeten verwalten."
+                : "Erstelle eine neue Team-Challenge, um zu starten."}
             </p>
           </div>
         </div>
 
         {selectedChallenge && (
           <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2 lg:flex">
-            <Metric label="Starts" value={selectedChallenge.startsAt?.toLocaleDateString() ?? "-"} />
-            <Metric label="Ends" value={selectedChallenge.endsAt?.toLocaleDateString() ?? "-"} />
+            <Metric label="Start" value={selectedChallenge.startsAt?.toLocaleDateString("de-DE") ?? "-"} />
+            <Metric label="Ende" value={selectedChallenge.endsAt?.toLocaleDateString("de-DE") ?? "-"} />
           </div>
         )}
       </header>
 
       {!hasFirebaseConfig ? (
         <Notice tone="warning">
-          Firebase config is missing. Add your Firebase web app values to
-          `offseason_challenge/.env.local` before using challenge management.
+          Firebase-Konfiguration fehlt. Ergaenze die Firebase-Web-App-Werte in
+          `offseason_challenge/.env.local`, bevor du die Challenge-Verwaltung nutzt.
         </Notice>
       ) : null}
 
@@ -473,10 +473,10 @@ export function ChallengeAdmin({
       {!selectedChallengeId ? (
         <div className="max-w-xl mx-auto w-full py-8">
           <div className="panel flex flex-col gap-6">
-            <h2 className="text-xl font-bold text-brand-strong">New challenge</h2>
+            <h2 className="text-xl font-bold text-brand-strong">Neue Challenge</h2>
             <form className="grid gap-4" onSubmit={handleCreateChallenge}>
               <label>
-                <span>Challenge Name</span>
+                <span>Challenge-Name</span>
                 <input
                   maxLength={80}
                   name="challengeName"
@@ -485,20 +485,20 @@ export function ChallengeAdmin({
                 />
               </label>
               <label>
-                <span>Description</span>
+                <span>Beschreibung</span>
                 <input
                   maxLength={240}
                   name="challengeDescription"
-                  placeholder="Preseason points competition for the senior team"
+                  placeholder="Punktewettkampf fuer die Vorbereitung"
                 />
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <label>
-                  <span>Starts At</span>
+                  <span>Start</span>
                   <input name="startsAt" required type="date" />
                 </label>
                 <label>
-                  <span>Ends At</span>
+                  <span>Ende</span>
                   <input name="endsAt" required type="date" />
                 </label>
               </div>
@@ -507,7 +507,7 @@ export function ChallengeAdmin({
                 disabled={isSaving || !hasFirebaseConfig}
                 type="submit"
               >
-                {isSaving ? "Creating..." : "Create challenge"}
+                {isSaving ? "Wird erstellt..." : "Challenge erstellen"}
               </button>
             </form>
           </div>
@@ -682,21 +682,21 @@ function AdminPane({
       <section className="panel flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="eyebrow">Challenge settings</p>
-            <h2 className="text-xl font-bold text-brand-strong">Manage details</h2>
+            <p className="eyebrow">Challenge-Einstellungen</p>
+            <h2 className="text-xl font-bold text-brand-strong">Details verwalten</h2>
           </div>
           <button
             className="text-xs font-black uppercase tracking-widest text-brand hover:underline"
             onClick={onToggleEdit}
             type="button"
           >
-            {isEditing ? "Close Details" : "Edit Details"}
+            {isEditing ? "Details schliessen" : "Details bearbeiten"}
           </button>
         </div>
         {isEditing && selectedChallenge ? (
           <form className="grid gap-4" onSubmit={onUpdateChallenge}>
             <label>
-              <span>Challenge Name</span>
+              <span>Challenge-Name</span>
               <input
                 defaultValue={selectedChallenge.name}
                 maxLength={80}
@@ -705,7 +705,7 @@ function AdminPane({
               />
             </label>
             <label>
-              <span>Description</span>
+              <span>Beschreibung</span>
               <input
                 defaultValue={selectedChallenge.description}
                 maxLength={240}
@@ -714,7 +714,7 @@ function AdminPane({
             </label>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label>
-                <span>Starts At</span>
+                <span>Start</span>
                 <input
                   defaultValue={selectedChallenge.startsAt?.toISOString().slice(0, 10)}
                   name="startsAt"
@@ -723,7 +723,7 @@ function AdminPane({
                 />
               </label>
               <label>
-                <span>Ends At</span>
+                <span>Ende</span>
                 <input
                   defaultValue={selectedChallenge.endsAt?.toISOString().slice(0, 10)}
                   name="endsAt"
@@ -733,12 +733,12 @@ function AdminPane({
               </label>
             </div>
             <button className="button-primary mt-2 w-fit" disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Save changes"}
+              {isSaving ? "Speichern..." : "Aenderungen speichern"}
             </button>
           </form>
         ) : (
           <p className="text-sm font-medium text-muted">
-            Challenge name, description, and dates are edited here by admins only.
+            Name, Beschreibung und Zeitraum werden hier von Admins bearbeitet.
           </p>
         )}
       </section>
@@ -779,9 +779,9 @@ function AdminPane({
       />
 
       <section className="panel flex flex-col gap-3 border-danger/20">
-        <h2 className="text-lg font-bold uppercase tracking-wider text-danger">Danger zone</h2>
+        <h2 className="text-lg font-bold uppercase tracking-wider text-danger">Gefahrenbereich</h2>
         <p className="text-sm font-medium text-muted">
-          Archive this challenge and remove it from challenge lists.
+          Diese Challenge archivieren und aus den Listen entfernen.
         </p>
         <button
           className="button-secondary w-fit border-danger/30 text-danger hover:bg-danger/10"
@@ -789,7 +789,7 @@ function AdminPane({
           onClick={onDeleteChallenge}
           type="button"
         >
-          Delete challenge
+          Challenge loeschen
         </button>
       </section>
     </div>
@@ -865,17 +865,17 @@ function ChallengeOverview({
     <section className="panel flex flex-col gap-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Team Progress</p>
-          <h2 className="text-2xl font-bold text-brand-strong">Standings</h2>
+          <p className="eyebrow">Team-Fortschritt</p>
+          <h2 className="text-2xl font-bold text-brand-strong">Wertung</h2>
         </div>
         <div className="grid w-full grid-cols-1 gap-2 sm:w-auto">
-          <Metric label="Members" value={String(activeMembers.length)} />
+          <Metric label="Mitglieder" value={String(activeMembers.length)} />
         </div>
       </div>
 
       {teams.length === 0 ? (
         <p className="rounded-lg bg-surface-soft p-6 text-center text-sm font-medium text-muted">
-          Teams will appear here once the challenge admin creates them.
+          Teams erscheinen hier, sobald ein Admin sie erstellt.
         </p>
       ) : (
         <ol className="grid gap-3">
@@ -894,7 +894,7 @@ function ChallengeOverview({
                   <div className="min-w-0">
                     <p className="truncate font-bold text-brand-strong">{team.name}</p>
                     <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                      {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
+                      {team.memberCount} {team.memberCount === 1 ? "Mitglied" : "Mitglieder"}
                     </p>
                   </div>
                 </div>
@@ -904,12 +904,12 @@ function ChallengeOverview({
               </div>
               <details className="mt-4 min-w-0 rounded-lg border border-line bg-white/70 p-2 sm:p-3">
                 <summary className="cursor-pointer text-xs font-black uppercase tracking-widest text-muted">
-                  Participant scores
+                  Punkte der Teilnehmer
                 </summary>
                 <div className="mt-3 grid gap-2">
                   {(memberRowsByTeam.get(team.id) ?? []).length === 0 ? (
                     <p className="text-sm font-medium text-muted">
-                      No participants are assigned to this team yet.
+                      Diesem Team sind noch keine Teilnehmer zugeordnet.
                     </p>
                   ) : (
                     (memberRowsByTeam.get(team.id) ?? []).map((memberRow) => (
@@ -945,10 +945,10 @@ function ChallengeOverview({
       {unassignedMembers.length > 0 ? (
         <div className="rounded-lg border border-line bg-white p-4">
           <p className="text-xs font-black uppercase tracking-widest text-muted">
-            Unassigned
+            Nicht zugeordnet
           </p>
           <p className="mt-1 text-sm font-medium text-brand-strong">
-            {unassignedMembers.length} active {unassignedMembers.length === 1 ? "member is" : "members are"} waiting for a team.
+            {unassignedMembers.length} aktive {unassignedMembers.length === 1 ? "Person wartet" : "Personen warten"} auf ein Team.
           </p>
         </div>
       ) : null}
@@ -956,10 +956,10 @@ function ChallengeOverview({
       {unassignedPoints > 0 ? (
         <div className="rounded-lg border border-line bg-white p-4">
           <p className="text-xs font-black uppercase tracking-widest text-muted">
-            Unassigned points
+            Nicht zugeordnete Punkte
           </p>
           <p className="mt-1 text-sm font-medium text-brand-strong">
-            {unassignedPoints} points were logged before members received a team.
+            {unassignedPoints} Punkte wurden eingetragen, bevor Mitglieder einem Team zugeordnet waren.
           </p>
         </div>
       ) : null}
@@ -984,36 +984,36 @@ function ActivitySubmissionPanel({
   return (
     <section className="panel flex flex-col gap-4">
       <div>
-        <p className="eyebrow">Your Activity</p>
-        <h2 className="text-xl font-bold text-brand-strong">Add completed activity</h2>
+        <p className="eyebrow">Deine Aktivitaet</p>
+        <h2 className="text-xl font-bold text-brand-strong">Abgeschlossene Aktivitaet eintragen</h2>
       </div>
       {!currentMember || currentMember.status !== "active" ? (
         <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
-          You need to be an active member before logging activity.
+          Du musst aktives Mitglied sein, bevor du Aktivitaeten eintragen kannst.
         </p>
       ) : enabledRules.length === 0 ? (
         <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
-          No active activities are available yet.
+          Es sind noch keine Aktivitaeten verfuegbar.
         </p>
       ) : (
         <form className="grid gap-4" onSubmit={onCreateActivityLog}>
           <label>
-            <span>Activity</span>
+            <span>Aktivitaet</span>
             <select name="activityRuleId" required>
-              <option value="">Select activity</option>
+              <option value="">Aktivitaet auswaehlen</option>
               {enabledRules.map((activityRule) => (
                 <option key={activityRule.id} value={activityRule.id}>
-                  {activityRule.name} · {activityRule.scoring.points} pts
+                  {activityRule.name} - {activityRule.scoring.points} Punkte
                 </option>
               ))}
             </select>
           </label>
           <label>
-            <span>Date completed</span>
+            <span>Datum</span>
             <input defaultValue={today} max={today} name="activityDate" required type="date" />
           </label>
           <button className="button-primary" disabled={isSaving} type="submit">
-            Add activity
+            Aktivitaet eintragen
           </button>
         </form>
       )}
@@ -1039,40 +1039,40 @@ function ActivityFeedPanel({
   return (
     <section className="panel flex flex-col gap-4">
       <h2 className="text-lg font-bold uppercase tracking-wider text-brand-strong">
-        Recent activity
+        Letzte Aktivitaeten
       </h2>
       {recentLogs.length === 0 ? (
         <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
-          No activity has been logged yet.
+          Es wurden noch keine Aktivitaeten eingetragen.
         </p>
       ) : (
         <div className="grid gap-2">
           {recentLogs.map((activityLog) => (
             <div
-              className="rounded-lg border border-line bg-surface-soft/30 p-3"
+              className="min-w-0 rounded-lg border border-line bg-surface-soft/30 p-3"
               key={activityLog.id}
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div className="min-w-0">
                   <p className="truncate font-bold text-brand-strong">
                     {activityLog.activityNameSnapshot}
                   </p>
                   <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                    {activityLog.activityDate?.toLocaleDateString() ?? "No date"}
+                    {activityLog.activityDate?.toLocaleDateString("de-DE") ?? "Kein Datum"}
                   </p>
                 </div>
-                <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                <div className="flex min-w-0 items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-start">
                   <strong className="text-lg font-black text-brand-strong">
                     {activityLog.finalPoints}
                   </strong>
                   {isAdmin || activityLog.userId === currentUserId ? (
                     <button
-                      className="rounded border border-danger/30 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="max-w-full rounded border border-danger/30 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-widest"
                       disabled={isSaving}
                       onClick={() => onDeleteActivityLog(activityLog)}
                       type="button"
                     >
-                      Remove
+                      Entfernen
                     </button>
                   ) : null}
                 </div>
@@ -1099,15 +1099,15 @@ function TeamPanel({
       <h2 className="break-words text-lg font-bold uppercase tracking-wider text-brand-strong">Teams</h2>
       <form className="grid gap-4" onSubmit={onCreateTeam}>
         <label>
-          <span>Team name</span>
+          <span>Teamname</span>
           <input
             maxLength={50}
             name="teamName"
-            placeholder="Team Blue"
+            placeholder="Team Blau"
           />
         </label>
         <label>
-          <span>Color</span>
+          <span>Farbe</span>
           <div className="flex gap-2 items-center">
              <input 
               className="w-12 h-12 p-1 cursor-pointer"
@@ -1115,7 +1115,7 @@ function TeamPanel({
               name="teamColor"
               type="color" 
             />
-            <span className="text-xs font-bold text-muted uppercase">Pick a color</span>
+            <span className="text-xs font-bold text-muted uppercase">Farbe waehlen</span>
           </div>
         </label>
         <button
@@ -1123,14 +1123,14 @@ function TeamPanel({
           disabled={isSaving}
           type="submit"
         >
-          Add team
+          Team hinzufuegen
         </button>
       </form>
 
       <div className="mt-2 flex flex-col gap-2">
         {teams.length === 0 ? (
           <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
-            No teams yet.
+            Noch keine Teams.
           </p>
         ) : null}
         {teams.map((team) => (
@@ -1173,11 +1173,11 @@ function InvitePanel({
 
   return (
     <section className="panel flex min-w-0 flex-col gap-4">
-      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Invites</h2>
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Einladungen</h2>
       {invite ? (
         <div className="rounded-lg border border-line bg-surface-soft/30 p-4">
           <p className="text-xs font-black uppercase tracking-widest text-muted">
-            Challenge link
+            Challenge-Link
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <code className="truncate rounded bg-white border border-line px-3 py-1 font-mono text-base font-black text-brand-strong">
@@ -1188,24 +1188,24 @@ function InvitePanel({
               className="text-[10px] font-black uppercase tracking-widest bg-brand text-white px-2 py-1 rounded"
               type="button"
             >
-              {copied === invite.code ? "Copied!" : "Copy Link"}
+              {copied === invite.code ? "Kopiert!" : "Link kopieren"}
             </button>
           </div>
           <p className="mt-3 text-xs font-medium text-muted">
-            New members join unassigned. Assign teams from the member list.
+            Neue Mitglieder treten ohne Team bei. Teams werden in der Mitgliederliste zugeordnet.
           </p>
         </div>
       ) : (
         <form className="grid gap-4" onSubmit={onCreateInvite}>
           <p className="rounded-lg bg-surface-soft p-3 text-sm font-medium text-muted">
-            Generate one invitation link for this challenge.
+            Erstelle einen Einladungslink fuer diese Challenge.
           </p>
         <button
           className="button-primary"
           disabled={isSaving}
           type="submit"
         >
-          Generate invite
+          Einladung erstellen
         </button>
         </form>
       )}
@@ -1230,11 +1230,11 @@ function MemberPanel({
 
   return (
     <section className="panel flex min-w-0 flex-col gap-4">
-      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Members</h2>
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Mitglieder</h2>
       <div className="grid gap-2">
         {activeMembers.length === 0 ? (
           <p className="p-6 text-center text-muted italic bg-surface-soft rounded-lg">
-            No members yet. Share an invite link to get started.
+            Noch keine Mitglieder. Teile einen Einladungslink, um zu starten.
           </p>
         ) : null}
         {activeMembers.map((member) => (
@@ -1259,7 +1259,7 @@ function MemberPanel({
                   value={member.teamId || ""} 
                   onChange={(e) => onAssignTeam(member.userId, e.target.value || null)}
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">Nicht zugeordnet</option>
                   {teams.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
@@ -1268,7 +1268,7 @@ function MemberPanel({
               <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
                 member.role === 'admin' ? "bg-accent text-white" : "bg-muted/10 text-muted"
               }`}>
-                {member.role}
+                {member.role === "admin" ? "Admin" : "Teilnehmer"}
               </span>
               {member.role === "participant" ? (
                 <button
@@ -1277,7 +1277,7 @@ function MemberPanel({
                   onClick={() => onRemoveParticipant(member)}
                   type="button"
                 >
-                  Remove
+                  Entfernen
                 </button>
               ) : null}
             </div>
@@ -1311,22 +1311,22 @@ function CopyChallengePanel({
     <section className="panel flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Next Challenge</p>
+          <p className="eyebrow">Naechste Challenge</p>
           <h2 className="text-lg font-bold uppercase tracking-wider text-brand-strong">
-            Copy setup
+            Setup kopieren
           </h2>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:w-auto">
-          <Metric label="Members" value={String(memberCount)} />
-          <Metric label="Activities" value={String(activityRuleCount)} />
+          <Metric label="Mitglieder" value={String(memberCount)} />
+          <Metric label="Aktivitaeten" value={String(activityRuleCount)} />
         </div>
       </div>
       <p className="text-sm font-medium text-muted">
-        Creates a new challenge with the same teams, active members, team assignments, and activities. Activity logs are not copied, so all points start at 0.
+        Erstellt eine neue Challenge mit denselben Teams, aktiven Mitgliedern, Teamzuordnungen und Aktivitaeten. Aktivitaetseintraege werden nicht kopiert, alle Punkte starten bei 0.
       </p>
       <form className="grid gap-4" onSubmit={onCopyChallenge}>
         <label>
-          <span>New challenge name</span>
+          <span>Name der neuen Challenge</span>
           <input
             defaultValue={defaultName}
             maxLength={80}
@@ -1335,7 +1335,7 @@ function CopyChallengePanel({
           />
         </label>
         <label>
-          <span>Description</span>
+          <span>Beschreibung</span>
           <input
             defaultValue={defaultDescription}
             maxLength={240}
@@ -1344,16 +1344,16 @@ function CopyChallengePanel({
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label>
-            <span>Starts At</span>
+            <span>Start</span>
             <input name="copyStartsAt" required type="date" />
           </label>
           <label>
-            <span>Ends At</span>
+            <span>Ende</span>
             <input name="copyEndsAt" required type="date" />
           </label>
         </div>
         <button className="button-primary w-fit" disabled={isSaving} type="submit">
-          {isSaving ? "Copying..." : "Copy challenge"}
+          {isSaving ? "Wird kopiert..." : "Challenge kopieren"}
         </button>
       </form>
     </section>
@@ -1373,18 +1373,18 @@ function ActivityPanel({
 }) {
   return (
     <section className="panel flex min-w-0 flex-col gap-4">
-      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Activities</h2>
+      <h2 className="text-lg font-bold text-brand-strong uppercase tracking-wider">Aktivitaeten</h2>
       <form className="grid gap-4" onSubmit={onCreateActivity}>
         <label>
-          <span>Activity name</span>
+          <span>Aktivitaetsname</span>
           <input
             maxLength={80}
             name="activityName"
-            placeholder="Running / Jogging"
+            placeholder="Laufen / Joggen"
           />
         </label>
         <label>
-          <span>Points</span>
+          <span>Punkte</span>
           <input
             max={50}
             min={1}
@@ -1397,14 +1397,14 @@ function ActivityPanel({
           disabled={isSaving}
           type="submit"
         >
-          Add activity
+          Aktivitaet hinzufuegen
         </button>
       </form>
 
       <div className="mt-2 flex max-h-[520px] flex-col gap-2 overflow-y-auto pr-1">
         {activityRules.length === 0 ? (
           <p className="p-3 text-sm text-muted italic bg-surface-soft rounded-lg">
-            No activities yet.
+            Noch keine Aktivitaeten.
           </p>
         ) : null}
         {activityRules.map((activityRule) => (
@@ -1416,7 +1416,7 @@ function ActivityPanel({
               <div className="min-w-0">
                 <p className="font-bold text-brand-strong truncate">{activityRule.name}</p>
                 <p className="mt-1 text-xs font-extrabold text-muted uppercase tracking-wider">
-                  {activityRule.scoring.points} pts
+                  {activityRule.scoring.points} Punkte
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -1426,7 +1426,7 @@ function ActivityPanel({
                   onClick={() => onDeleteActivity(activityRule)}
                   type="button"
                 >
-                  Remove
+                  Entfernen
                 </button>
               </div>
             </div>
@@ -1464,5 +1464,5 @@ function Notice({
 }
 
 function getMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : "Etwas ist schiefgelaufen.";
 }

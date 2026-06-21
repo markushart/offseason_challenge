@@ -134,7 +134,7 @@ export type CopyChallengeInput = CreateChallengeInput & {
 
 const assertDb = () => {
   if (!db) {
-    throw new Error("Firebase is not configured. Add values to .env.local.");
+    throw new Error("Firebase ist nicht konfiguriert. Ergaenze die Werte in .env.local.");
   }
 
   return db;
@@ -471,7 +471,7 @@ export async function createChallenge(
 
   batch.set(creatorMemberRef, {
     userId: user.uid,
-    displayNameSnapshot: user.displayName ?? user.email ?? "Challenge admin",
+    displayNameSnapshot: user.displayName ?? user.email ?? "Challenge-Admin",
     emailSnapshot: user.email ?? null,
     teamId: null,
     role: "admin",
@@ -524,7 +524,7 @@ export async function copyChallenge(user: User, input: CopyChallengeInput) {
     doc(firestore, "competitions", competitionRef.id, "members", user.uid),
     {
       userId: user.uid,
-      displayNameSnapshot: user.displayName ?? user.email ?? "Challenge admin",
+      displayNameSnapshot: user.displayName ?? user.email ?? "Challenge-Admin",
       emailSnapshot: user.email ?? null,
       teamId:
         activeMembers.find((member) => member.userId === user.uid)?.teamId ?? null,
@@ -691,7 +691,7 @@ export async function joinChallenge(user: User, code: string, displayName: strin
   const displayNameSnapshot = displayName.trim();
 
   if (!displayNameSnapshot) {
-    throw new Error("Add your name to join this challenge.");
+    throw new Error("Gib deinen Namen ein, um der Challenge beizutreten.");
   }
   
   // Find the invite
@@ -702,7 +702,7 @@ export async function joinChallenge(user: User, code: string, displayName: strin
   
   const inviteSnapshot = await getDocs(invitesQuery);
   if (inviteSnapshot.empty) {
-    throw new Error("Invalid invite code.");
+    throw new Error("Ungueltiger Einladungscode.");
   }
   
   const inviteDoc = inviteSnapshot.docs[0];
@@ -711,7 +711,7 @@ export async function joinChallenge(user: User, code: string, displayName: strin
   const competitionRef = doc(firestore, "competitions", competitionId);
   
   if (inviteData.disabledAt) {
-    throw new Error("This invite has been disabled.");
+    throw new Error("Diese Einladung wurde deaktiviert.");
   }
   
   // Check if already a member
@@ -801,7 +801,7 @@ export async function createActivityLog(input: CreateActivityLogInput) {
   const activityDate = new Date(`${input.activityDate}T12:00:00`);
 
   if (Number.isNaN(activityDate.getTime())) {
-    throw new Error("Select a valid activity date.");
+    throw new Error("Waehle ein gueltiges Aktivitaetsdatum.");
   }
 
   await addDoc(

@@ -48,7 +48,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     const displayName = String(formData.get("displayName") ?? "").trim();
 
     if (!displayName) {
-      setJoinError("Add your name to join this challenge.");
+      setJoinError("Gib deinen Namen ein, um der Challenge beizutreten.");
       return;
     }
 
@@ -61,8 +61,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
       setPendingJoinCode(null);
       clearJoinParam();
     } catch (err) {
-      console.error("Failed to join challenge:", err);
-      setJoinError(err instanceof Error ? err.message : "Failed to join challenge.");
+      console.error("Challenge-Beitritt fehlgeschlagen:", err);
+      setJoinError(err instanceof Error ? err.message : "Challenge-Beitritt fehlgeschlagen.");
     } finally {
       setIsJoining(false);
     }
@@ -82,8 +82,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
         setChallenges(nextChallenges);
         setIsLoading(false);
 
-        // If no challenge is selected yet, or the selected one isn't in the list, 
-        // default to the first one (most recent / alphabetical)
         setSelectedChallengeId((currentId) => {
           if (currentId && nextChallenges.some((c) => c.id === currentId)) {
             return currentId;
@@ -92,7 +90,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         });
       },
       (error) => {
-        console.error("Error listening to challenges:", error);
+        console.error("Fehler beim Laden der Challenges:", error);
         setIsLoading(false);
       }
     );
@@ -122,18 +120,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     : "text-muted hover:bg-surface-soft"
                 }`}
               >
-                + New Challenge
+                + Neue Challenge
               </button>
             </div>
 
             <div className="space-y-1">
               <p className="px-3 text-[11px] font-extrabold uppercase tracking-widest text-muted opacity-60">
-                Your Challenges
+                Deine Challenges
               </p>
               {isLoading ? (
-                <p className="px-3 py-2 text-sm text-muted">Loading...</p>
+                <p className="px-3 py-2 text-sm text-muted">Wird geladen...</p>
               ) : challenges.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-muted italic opacity-60">No challenges yet</p>
+                <p className="px-3 py-2 text-sm text-muted italic opacity-60">Noch keine Challenges</p>
               ) : (
                 challenges.map((challenge) => (
                   <button
@@ -158,7 +156,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   {(user.displayName ?? user.email ?? "U").slice(0, 1)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase text-muted leading-none mb-1">Signed in</p>
+                  <p className="text-[11px] font-extrabold uppercase text-muted leading-none mb-1">Angemeldet</p>
                   <p className="font-extrabold text-sm truncate text-brand-strong">{user.displayName ?? user.email}</p>
                 </div>
              </div>
@@ -179,7 +177,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             onChange={(e) => handleSelectChallenge(e.target.value)}
             className="text-sm font-extrabold border-line rounded-lg w-auto min-h-[38px] bg-surface-soft"
           >
-            <option value="">+ New Challenge</option>
+            <option value="">+ Neue Challenge</option>
             {challenges.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -194,12 +192,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
             >
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                 <label>
-                  <span>Your name</span>
+                  <span>Dein Name</span>
                   <input
                     autoFocus
                     maxLength={80}
                     name="displayName"
-                    placeholder="Name shown in this challenge"
+                    placeholder="Name in dieser Challenge"
                     required
                   />
                 </label>
@@ -208,7 +206,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   disabled={isJoining}
                   type="submit"
                 >
-                  {isJoining ? "Joining..." : "Join challenge"}
+                  {isJoining ? "Beitreten..." : "Challenge beitreten"}
                 </button>
               </div>
             </form>

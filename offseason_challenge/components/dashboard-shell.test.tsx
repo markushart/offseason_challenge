@@ -34,7 +34,7 @@ describe("DashboardShell", () => {
   it("shows a join error if invite-link joining fails", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/?join=ABC123");
-    mocks.joinChallenge.mockRejectedValue(new Error("Invalid invite code."));
+    mocks.joinChallenge.mockRejectedValue(new Error("Ungueltiger Einladungscode."));
 
     render(
       <DashboardShell>
@@ -42,11 +42,11 @@ describe("DashboardShell", () => {
       </DashboardShell>,
     );
 
-    await user.clear(await screen.findByLabelText(/your name/i));
-    await user.type(screen.getByLabelText(/your name/i), "Player One");
-    await user.click(screen.getByRole("button", { name: /^join challenge$/i }));
+    await user.clear(await screen.findByLabelText(/dein name/i));
+    await user.type(screen.getByLabelText(/dein name/i), "Player One");
+    await user.click(screen.getByRole("button", { name: /^challenge beitreten$/i }));
 
-    await screen.findByText("Invalid invite code.");
+    await screen.findByText("Ungueltiger Einladungscode.");
     expect(mocks.joinChallenge).toHaveBeenCalledWith(
       expect.objectContaining({ uid: "user-1" }),
       "ABC123",
@@ -65,9 +65,9 @@ describe("DashboardShell", () => {
       </DashboardShell>,
     );
 
-    await user.clear(await screen.findByLabelText(/your name/i));
-    await user.type(screen.getByLabelText(/your name/i), "Player One");
-    await user.click(screen.getByRole("button", { name: /^join challenge$/i }));
+    await user.clear(await screen.findByLabelText(/dein name/i));
+    await user.type(screen.getByLabelText(/dein name/i), "Player One");
+    await user.click(screen.getByRole("button", { name: /^challenge beitreten$/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Selected: competition-1")).toBeInTheDocument();
