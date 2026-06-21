@@ -45,13 +45,16 @@ This role is not required for the first version, but may be useful later for glo
 - The creator is stored as competition admin.
 - Competition starts with no teams or with optional initial teams.
 - Admin can choose an activity rule set template, such as the rules from `rules.pdf`.
+- Admin can copy an existing competition into a new one. The copy should include active participants, their team assignments, teams, and activity rules, but no activity logs, so all copied participant and team points start at 0.
 
 ### Invitation and Enrollment
 
-- Admin creates invite links or invite codes for a competition.
+- Admin creates one general invite link for a competition.
 - Participant uses the invite to enroll.
-- Participant starts as unassigned until the admin places them on a team, unless self-selection is enabled.
+- Participant chooses the display name shown inside the competition during invite enrollment.
+- Participant starts as unassigned until the admin places them on a team.
 - A participant should only belong to one team per competition.
+- Admin can remove participant members from a competition without exposing participant email addresses in the member list.
 
 ### Team Competition
 
@@ -65,6 +68,7 @@ This role is not required for the first version, but may be useful later for glo
 - Participant enters required values, such as date, duration, intensity, or notes.
 - App calculates suggested points from the activity rule.
 - Activity is submitted as accepted automatically or as pending review, depending on competition settings.
+- The participant who submitted an activity, or a competition admin, can remove a mistaken activity entry.
 - Admin can approve, reject, or adjust entries if moderation is enabled.
 
 ## Scoring Rules From `rules.pdf`

@@ -108,18 +108,18 @@ The initial rules are strict by default:
 
 - Users can manage only their own profile document.
 - Competition members can read competition data.
-- Competition admins can manage teams, members, invites, activity rules, and submitted activity logs.
+- Competition admins can manage teams, members, invites, and activity rules.
 - Participants can create activity logs for themselves.
 - Proof uploads are scoped to `competitions/{competitionId}/proofs/{userId}/{fileName}`.
-- Deletes are disabled for core Firestore data in the first draft.
-- Participants cannot add themselves to arbitrary competitions through direct client writes.
+- Deletes are disabled for most core Firestore data in the first draft; admins can delete activity rule documents.
+- Participants cannot add themselves to arbitrary competitions without a valid invite code.
 
-The current checked-in `firestore.rules` file covers the first admin workflow:
+The current checked-in `firestore.rules` file covers the current challenge/admin prototype:
 
 - A signed-in user can create a competition and becomes its sole initial admin.
-- Competition admins can create teams, invite codes, and fixed-point activity rules.
-- Invite codes are admin-readable only until a secure invite acceptance flow exists.
-- Direct self-enrollment is blocked.
+- Competition admins can create teams, one reusable invite link, and fixed-point activity rules.
+- Competition members can read teams, enabled/disabled activity rules, and accepted activity logs for standings.
+- Direct self-enrollment is allowed only through the invite join flow, which validates the invite code and writes an active participant membership.
 
 Run this before deploying rule changes:
 
@@ -127,16 +127,17 @@ Run this before deploying rule changes:
 npx -y firebase-tools@latest deploy --only firestore:rules --dry-run
 ```
 
-The current activity log rule allows clients to submit `calculatedPoints` and requires `finalPoints` to match. This is acceptable for an early prototype, but not strong enough for a competitive production app. The production version should either calculate final points in Cloud Functions or validate every point rule in Security Rules.
+The current activity log rule allows clients to submit `calculatedPoints`, requires `finalPoints` to match, and validates the selected enabled fixed-point activity rule, activity name snapshot, point value, current user ID, and current member team. This is acceptable for an early fixed-point prototype, but the production version should move scoring into Cloud Functions or extend rule validation for every future scoring type.
 
 ## Invite Acceptance
 
-For the first secure version, invite acceptance should be handled by one of these approaches:
+The current invite acceptance flow is client-side:
 
-- Admin-managed enrollment: an admin creates the member record after inviting a participant.
-- Cloud Function enrollment: the participant submits an invite code to a callable function, and the function validates the invite, creates the member document, increments invite usage, and optionally assigns a team.
+- A participant submits an invite code from the link.
+- The client queries the invite by code, creates or reactivates the participant member document, and appends the user ID to `memberIds`.
+- The member joins unassigned; admins assign teams later.
 
-Avoid allowing any signed-in user to create their own member document directly from the client. If a competition ID or invite document ID leaks, that would allow unauthorized enrollment.
+For stronger production hardening, move invite acceptance to a callable Cloud Function so invite lookup and membership writes happen server-side.
 
 ## Recommended Collection Paths
 
@@ -157,5 +158,5 @@ These paths match `docs/firebase-data-model.md`.
 
 - Whether activity logs should be auto-accepted or admin-reviewed by default.
 - Whether proof uploads are mandatory.
-- Whether invite links should be single-use, multi-use, or team-specific.
+- Whether reusable invite links need revocation, rotation, or expiration before a real competition.
 - Whether final score calculation should move to Cloud Functions before the first real competition.

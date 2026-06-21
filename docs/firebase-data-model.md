@@ -37,9 +37,11 @@ Stores platform-level profile data. Competition-specific roles and team membersh
   "description": "Preseason points competition",
   "createdBy": "userId",
   "adminIds": ["userId"],
+  "memberIds": ["userId"],
   "status": "draft",
   "startsAt": "timestamp",
   "endsAt": "timestamp",
+  "copiedFrom": "competitionId",
   "settings": {
     "activityApprovalMode": "auto",
     "proofRequired": false,
@@ -50,6 +52,8 @@ Stores platform-level profile data. Competition-specific roles and team membersh
   "updatedAt": "serverTimestamp"
 }
 ```
+
+`copiedFrom` is optional and is set when an admin creates a new competition by copying an existing one. The copy operation creates fresh team, member, and activity rule documents under the new competition, but does not copy `activityLogs`; standings therefore start from zero points.
 
 Suggested statuses:
 
@@ -69,13 +73,15 @@ Suggested statuses:
 }
 ```
 
-Team score can be calculated from accepted logs. A cached score may be added later if standings queries become expensive.
+Team score is currently calculated in the UI as the sum of accepted logs for active members assigned to that team. Points follow a member's current `teamId`; a cached score or immutable team snapshot may be added later if standings queries become expensive or historical team attribution becomes required.
 
 ## `competitions/{competitionId}/members/{userId}`
 
 ```json
 {
   "userId": "userId",
+  "displayNameSnapshot": "Participant Name",
+  "emailSnapshot": "participant@example.com",
   "teamId": "teamId",
   "role": "participant",
   "status": "active",
@@ -95,22 +101,20 @@ Suggested statuses:
 - `active`
 - `removed`
 
+Participants choose `displayNameSnapshot` when accepting an invite. Admin member lists should show participant display names, not email addresses. Removing a participant marks the member `removed` and removes the user ID from the competition `memberIds` array so the challenge no longer appears in their list.
+
 ## `competitions/{competitionId}/invites/{inviteId}`
 
 ```json
 {
   "code": "ABC123",
   "createdBy": "adminUserId",
-  "teamId": null,
-  "maxUses": null,
-  "usedCount": 0,
-  "expiresAt": "timestamp",
   "createdAt": "serverTimestamp",
   "disabledAt": null
 }
 ```
 
-An invite may optionally preselect a team. If `teamId` is null, the participant joins the competition as unassigned.
+Each competition should expose one reusable invite link. New participants always join as unassigned; admins assign teams from the member list.
 
 ## `competitions/{competitionId}/activityRules/{activityRuleId}`
 
@@ -281,6 +285,27 @@ Suggested statuses:
 - `rejected`
 
 Store snapshots such as `activityNameSnapshot` and `finalPoints` so historical logs remain understandable if activity rules are edited later.
+
+The current UI writes the fixed-point completion subset first:
+
+```json
+{
+  "userId": "userId",
+  "teamId": "teamId",
+  "activityRuleId": "activityRuleId",
+  "activityNameSnapshot": "Normal team training",
+  "activityDate": "timestamp",
+  "calculatedPoints": 10,
+  "finalPoints": 10,
+  "status": "accepted",
+  "createdAt": "serverTimestamp",
+  "updatedAt": "serverTimestamp"
+}
+```
+
+Members add their own activity logs by selecting an enabled competition activity rule and the date they completed it. The log stores the member's `teamId` at submission time for audit context, but current standings intentionally sum points by the member's current team assignment. If a member logs activity while unassigned and is assigned to a team later, those points count for the new team immediately.
+
+Mistaken activity entries can be deleted by the user who submitted the log or by a competition admin. Because standings are calculated from existing accepted logs, deleting an activity log removes its points from participant and team totals.
 
 ## Security Rule Intent
 

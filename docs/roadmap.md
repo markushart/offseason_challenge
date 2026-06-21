@@ -21,39 +21,39 @@
 
 - Create competition form. Initial version done.
 - Store creator as competition admin. Done.
-- Add competition list for the signed-in user. Initial admin-owned list done.
-- Add competition detail page. Initial same-page admin management view done.
-- Add team creation and editing. Team creation done; editing not started.
-- Add member list.
+- Add competition list for the signed-in user. Initial member challenge list and switching UI done.
+- Add competition detail page. Initial same-page Challenge/Admin pane split is done.
+- Add team creation and editing. Team creation, member assignment, and participant removal are done; team editing/removal not started.
+- Add member list. Done.
 - Add admin-only controls. Initial Firestore rules and UI controls done for challenge admins.
 
 ## Phase 3: Invites and Team Assignment
 
-- Generate invite codes or links. Initial invite code generation done.
-- Let participants join a competition through an invite, preferably through a callable Cloud Function.
-- Let admins assign participants to teams.
+- Generate one reusable invite link per competition. Initial invite link generation done.
+- Let participants join a competition through an invite. Initial client-side join flow with participant-chosen display names is done; callable Cloud Function version is pending.
+- Let admins assign participants to teams. Initial assignment flow done.
 - Prevent duplicate active membership for the same competition.
 
 ## Phase 4: Activity Catalog
 
 - Seed the activity rules from `rules.pdf`.
-- Store rules in Firestore under each competition. Initial fixed-point custom activity rule creation done.
-- Load enabled activity rules into the activity submission UI.
+- Store rules in Firestore under each competition. Initial fixed-point custom activity rule creation, enable/disable, and admin removal are done.
+- Load enabled activity rules into the activity submission UI. Done for fixed-point completion rules.
 - Build reusable scoring functions for fixed, choice, thresholds, manual range, and bonus rules.
 
 ## Phase 5: Activity Submission
 
-- Build participant activity entry form.
-- Calculate points before submission.
-- Store activity logs with activity rule snapshots.
+- Build participant activity entry form. Initial fixed-point completion form is done.
+- Calculate points before submission. Done for fixed-point rules.
+- Store activity logs with activity rule snapshots. Done for fixed-point rules.
 - Add optional proof upload to Firebase Storage.
 - Add pending / accepted / rejected status support.
 
 ## Phase 6: Standings and Dashboards
 
 - Show participant points.
-- Show team standings.
-- Show recent activity feed.
+- Show team standings. Initial version is done and sums accepted logs by each active member's current team assignment.
+- Show recent activity feed. Initial version is done.
 - Add filters by week, team, participant, and activity category.
 - Add weekly cap handling for extra / replacement points.
 
