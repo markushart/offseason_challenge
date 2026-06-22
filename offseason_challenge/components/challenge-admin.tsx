@@ -15,6 +15,7 @@ import {
   deleteChallenge,
   listenChallenge,
   listenChallengeDetail,
+  promoteParticipant,
   removeParticipant,
   updateChallenge,
   type ActivityRule,
@@ -434,6 +435,29 @@ export function ChallengeAdmin({
     }
   };
 
+  const handlePromoteParticipant = async (member: Member) => {
+    if (!selectedChallenge || member.role !== "participant") {
+      return;
+    }
+
+    const confirmed = window.confirm(`${member.displayNameSnapshot} zum Admin machen?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      await promoteParticipant(selectedChallenge.id, member.userId);
+    } catch (err) {
+      setError(getMessage(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
@@ -541,6 +565,7 @@ export function ChallengeAdmin({
               onCopyChallenge={handleCopyChallenge}
               onDeleteActivity={handleDeleteActivity}
               onDeleteChallenge={handleDeleteChallenge}
+              onPromoteParticipant={handlePromoteParticipant}
               onRemoveParticipant={handleRemoveParticipant}
               onToggleEdit={() => setIsEditing((current) => !current)}
               onUpdateChallenge={handleUpdateChallenge}
@@ -653,6 +678,7 @@ function AdminPane({
   onCopyChallenge,
   onDeleteActivity,
   onDeleteChallenge,
+  onPromoteParticipant,
   onRemoveParticipant,
   onToggleEdit,
   onUpdateChallenge,
@@ -671,6 +697,7 @@ function AdminPane({
   onCopyChallenge: (event: FormEvent<HTMLFormElement>) => void;
   onDeleteActivity: (activityRule: ActivityRule) => void;
   onDeleteChallenge: () => void;
+  onPromoteParticipant: (member: Member) => void;
   onRemoveParticipant: (member: Member) => void;
   onToggleEdit: () => void;
   onUpdateChallenge: (event: FormEvent<HTMLFormElement>) => void;
@@ -766,6 +793,7 @@ function AdminPane({
         isSaving={isSaving}
         members={members}
         onAssignTeam={onAssignTeam}
+        onPromoteParticipant={onPromoteParticipant}
         onRemoveParticipant={onRemoveParticipant}
         teams={teams}
       />
@@ -1218,12 +1246,14 @@ function MemberPanel({
   members,
   teams,
   onAssignTeam,
+  onPromoteParticipant,
   onRemoveParticipant,
 }: {
   isSaving: boolean;
   members: Member[];
   teams: Team[];
   onAssignTeam: (userId: string, teamId: string | null) => void;
+  onPromoteParticipant: (member: Member) => void;
   onRemoveParticipant: (member: Member) => void;
 }) {
   const activeMembers = members.filter((member) => member.status === "active");
@@ -1271,14 +1301,24 @@ function MemberPanel({
                 {member.role === "admin" ? "Admin" : "Teilnehmer"}
               </span>
               {member.role === "participant" ? (
-                <button
-                  className="rounded border border-danger/30 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSaving}
-                  onClick={() => onRemoveParticipant(member)}
-                  type="button"
-                >
-                  Entfernen
-                </button>
+                <>
+                  <button
+                    className="rounded border border-accent/30 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSaving}
+                    onClick={() => onPromoteParticipant(member)}
+                    type="button"
+                  >
+                    Zum Admin machen
+                  </button>
+                  <button
+                    className="rounded border border-danger/30 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSaving}
+                    onClick={() => onRemoveParticipant(member)}
+                    type="button"
+                  >
+                    Entfernen
+                  </button>
+                </>
               ) : null}
             </div>
           </div>

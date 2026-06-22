@@ -7,6 +7,7 @@ import {
   deleteActivityRule,
   deleteChallenge,
   joinChallenge,
+  promoteParticipant,
   removeParticipant,
 } from "@/lib/challenges";
 
@@ -335,6 +336,30 @@ describe("joinChallenge", () => {
         updatedAt: "ts",
       }),
     );
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("promotes a participant and adds them to challenge admins", async () => {
+    const batchUpdate = vi.fn();
+    const batchCommit = vi.fn().mockResolvedValue(undefined);
+    mocks.writeBatch.mockReturnValue({ commit: batchCommit, update: batchUpdate });
+
+    await promoteParticipant("competition-1", "user-2");
+
+    expect(batchUpdate).toHaveBeenCalledWith(
+      "member-ref",
+      expect.objectContaining({
+        role: "admin",
+      }),
+    );
+    expect(batchUpdate).toHaveBeenCalledWith(
+      "member-ref",
+      expect.objectContaining({
+        adminIds: "member-array-union",
+        updatedAt: "ts",
+      }),
+    );
+    expect(mocks.arrayUnion).toHaveBeenCalledWith("user-2");
     expect(batchCommit).toHaveBeenCalledTimes(1);
   });
 
