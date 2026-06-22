@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   deleteChallenge: vi.fn(),
   listenChallenge: vi.fn(),
   listenChallengeDetail: vi.fn(),
+  promoteParticipant: vi.fn(),
   removeParticipant: vi.fn(),
 }));
 
@@ -43,6 +44,7 @@ vi.mock("@/lib/challenges", () => ({
   deleteChallenge: mocks.deleteChallenge,
   listenChallenge: mocks.listenChallenge,
   listenChallengeDetail: mocks.listenChallengeDetail,
+  promoteParticipant: mocks.promoteParticipant,
   removeParticipant: mocks.removeParticipant,
 }));
 
@@ -59,6 +61,7 @@ describe("ChallengeAdmin", () => {
     mocks.deleteActivityLog.mockResolvedValue(undefined);
     mocks.deleteActivityRule.mockResolvedValue(undefined);
     mocks.deleteChallenge.mockResolvedValue(undefined);
+    mocks.promoteParticipant.mockResolvedValue(undefined);
     mocks.removeParticipant.mockResolvedValue(undefined);
 
     mocks.listenChallenge.mockImplementation((_id, onData) => {
@@ -367,6 +370,49 @@ describe("ChallengeAdmin", () => {
 
     await waitFor(() => {
       expect(mocks.removeParticipant).toHaveBeenCalledWith("challenge-1", "user-2");
+    });
+  });
+
+  it("lets admins promote participants to admins", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Player One",
+            emailSnapshot: "player@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+        activityLogs: [],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^admin$/i }));
+    expect(await screen.findByText("Player One")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /zum admin machen/i }));
+
+    await waitFor(() => {
+      expect(mocks.promoteParticipant).toHaveBeenCalledWith("challenge-1", "user-2");
     });
   });
 

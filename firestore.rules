@@ -165,6 +165,28 @@ service cloud.firestore {
         getAfter(memberPath(competitionId, request.auth.uid)).data.status == "active";
     }
 
+    function validCompetitionAdminPromotion(data, competitionId) {
+      let promotedUserId = data.adminIds[resource.data.adminIds.size()];
+
+      return validCompetition(data) &&
+        data.createdBy == resource.data.createdBy &&
+        data.createdAt == resource.data.createdAt &&
+        data.updatedAt == request.time &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "adminIds",
+          "updatedAt"
+        ]) &&
+        data.adminIds.size() == resource.data.adminIds.size() + 1 &&
+        data.adminIds.hasAll(resource.data.adminIds) &&
+        !(promotedUserId in resource.data.adminIds) &&
+        exists(memberPath(competitionId, promotedUserId)) &&
+        get(memberPath(competitionId, promotedUserId)).data.status == "active" &&
+        get(memberPath(competitionId, promotedUserId)).data.role == "participant" &&
+        getAfter(memberPath(competitionId, promotedUserId)).data.userId == promotedUserId &&
+        getAfter(memberPath(competitionId, promotedUserId)).data.status == "active" &&
+        getAfter(memberPath(competitionId, promotedUserId)).data.role == "admin";
+    }
+
     function validMember(data, userId) {
       return data.keys().hasOnly([
           "userId",
@@ -224,6 +246,26 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "displayNameSnapshot"
         ]);
+    }
+
+    function validMemberAdminPromotion(data, userId, competitionId) {
+      return validMember(data, userId) &&
+        resource.data.userId == userId &&
+        resource.data.role == "participant" &&
+        resource.data.status == "active" &&
+        data.userId == resource.data.userId &&
+        data.displayNameSnapshot == resource.data.displayNameSnapshot &&
+        data.emailSnapshot == resource.data.emailSnapshot &&
+        data.teamId == resource.data.teamId &&
+        data.joinedAt == resource.data.joinedAt &&
+        data.invitedBy == resource.data.invitedBy &&
+        data.status == "active" &&
+        data.role == "admin" &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "role"
+        ]) &&
+        !(userId in get(competitionPath(competitionId)).data.adminIds) &&
+        userId in getAfter(competitionPath(competitionId)).data.adminIds;
     }
 
     function validTeam(data) {
@@ -358,7 +400,10 @@ service cloud.firestore {
       allow create: if signedIn() && validCompetitionCreate(request.resource.data);
       allow update: if (
           isCompetitionAdmin(competitionId) &&
-          validCompetitionUpdate(request.resource.data)
+          (
+            validCompetitionUpdate(request.resource.data) ||
+            validCompetitionAdminPromotion(request.resource.data, competitionId)
+          )
         ) || (
           signedIn() &&
           validCompetitionMemberJoin(request.resource.data, competitionId)
@@ -376,7 +421,10 @@ service cloud.firestore {
           validMemberCreate(request.resource.data, userId);
         allow update: if (
             isCompetitionAdmin(competitionId) &&
-            validMemberUpdate(request.resource.data, userId)
+            (
+              validMemberUpdate(request.resource.data, userId) ||
+              validMemberAdminPromotion(request.resource.data, userId, competitionId)
+            )
           ) ||
           validMemberSelfJoinUpdate(request.resource.data, userId) ||
           validMemberSelfNameUpdate(request.resource.data, userId);

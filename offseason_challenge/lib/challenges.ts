@@ -672,6 +672,22 @@ export async function removeParticipant(competitionId: string, userId: string) {
   await batch.commit();
 }
 
+export async function promoteParticipant(competitionId: string, userId: string) {
+  const firestore = assertDb();
+  const batch = writeBatch(firestore);
+  const now = serverTimestamp();
+
+  batch.update(doc(firestore, "competitions", competitionId, "members", userId), {
+    role: "admin",
+  });
+  batch.update(doc(firestore, "competitions", competitionId), {
+    adminIds: arrayUnion(userId),
+    updatedAt: now,
+  });
+
+  await batch.commit();
+}
+
 export async function createInvite(input: CreateInviteInput, createdBy: string) {
   const firestore = assertDb();
 
