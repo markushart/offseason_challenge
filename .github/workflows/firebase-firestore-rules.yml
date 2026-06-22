@@ -1,0 +1,26 @@
+name: Deploy Firestore rules
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - firebase.json
+      - firestore.indexes.json
+      - firestore.rules
+
+jobs:
+  deploy_firestore_rules:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: offseason-challenge
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write Firebase service account
+        run: printf "%s" "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
+      - name: Deploy Firestore rules and indexes
+        run: npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID"
