@@ -25,7 +25,7 @@
 - Add competition detail page. Initial same-page Challenge/Admin pane split is done.
 - Add team creation and editing. Team creation, member assignment, and participant removal are done; team editing/removal not started.
 - Add member list. Done.
-- Add admin-only controls. Initial Firestore rules and UI controls done for challenge admins.
+- Add admin-only controls. Initial Firestore rules and UI controls done for challenge admins, including participant promotion to admin.
 
 ## Phase 3: Invites and Team Assignment
 
@@ -79,7 +79,7 @@ Before any deploy, run:
 npm run ci --prefix offseason_challenge
 ```
 
-New development must include lightweight tests appropriate to the change before deployment. The current deploy workflows and Firebase Hosting `predeploy` hook run CI automatically.
+New development must include lightweight tests appropriate to the change before deployment. The current deploy workflows and Firebase Hosting `predeploy` hook run CI automatically. Firestore rule/index changes are deployed by the dedicated Firestore workflow when pushed to `develop` or `main`.
 
 ## Initial Technical Choices
 
