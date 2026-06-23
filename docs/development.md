@@ -23,6 +23,7 @@
   - create fixed-point activity rules
   - enable, disable, or remove activity rules
   - assign members to teams
+  - promote participants to admins
   - remove participants
   - archive challenges
   - edit challenge name, description, and dates from the Admin pane only
@@ -61,19 +62,23 @@ npm run ci --prefix offseason_challenge
 
 Firebase Hosting is configured with a `predeploy` hook that runs the same check before manual Hosting deploys. GitHub Hosting workflows also run `npm run ci --prefix offseason_challenge` before deploy or preview deploy.
 
+For normal feature work in this repository, commit and push verified changes to `develop`. The `develop` push starts the preview build workflow. Merging to `main` starts the live Firebase Hosting deploy workflow.
+
 ## Current Test Coverage
 
 - `offseason_challenge/components/challenge-admin.test.tsx`
-  - Covers team creation, challenge archive, member standings, participant removal, activity rule removal, and member activity submission.
+  - Covers team creation, challenge archive, member standings, participant promotion/removal, activity rule removal, and member activity submission.
 - `offseason_challenge/lib/challenges.join.test.ts`
-  - Covers reusable invite creation, challenge archive, participant removal, invite joins, activity rule deletion, and activity log writes.
+  - Covers reusable invite creation, challenge archive, participant promotion/removal, invite joins, activity rule deletion, and activity log writes.
 
 ## Deployment Notes
 
-Deploy Firestore rules and indexes after review:
+Firestore rules and indexes are deployed by `.github/workflows/firebase-firestore-rules.yml` on pushes to `develop` or `main` when `firestore.rules`, `firestore.indexes.json`, or `firebase.json` changes.
+
+Validate Firestore rule changes before committing:
 
 ```sh
-npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes
+npx -y firebase-tools@latest deploy --only firestore:rules --dry-run
 ```
 
 Deploy Hosting after CI passes:

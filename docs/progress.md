@@ -49,6 +49,7 @@
 - Added deletion of mistaken activity entries by the submitting member or competition admin.
 - Added recent activity feed and standings from accepted activity logs.
 - Added admin removal of activity rules.
+- Added admin promotion of active participants to admins.
 - Updated standings to calculate team points from each active member's current team assignment, so points follow a participant after team assignment.
 - Added per-team participant score breakdown.
 - Moved challenge detail editing into the Admin pane only.
@@ -56,6 +57,7 @@
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.
 - Updated Firebase Hosting workflows to run lint, tests, and build before deploy.
+- Added a Firestore rules/indexes deploy workflow for rule changes pushed to `develop` or `main`.
 - Added Firebase Hosting `predeploy` hook to run the same CI gate for manual Hosting deploys.
 - Deployed prototype Firestore rules and indexes for the first challenge-admin workflow.
 - Added `docs/development.md` with current commands, testing rules, and deployment notes.

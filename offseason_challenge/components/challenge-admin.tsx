@@ -658,6 +658,7 @@ function ChallengePane({
           currentUserId={currentMember?.userId}
           isAdmin={isAdmin}
           isSaving={isSaving}
+          members={members}
           onDeleteActivityLog={onDeleteActivityLog}
         />
       </div>
@@ -1054,15 +1055,20 @@ function ActivityFeedPanel({
   currentUserId,
   isAdmin,
   isSaving,
+  members,
   onDeleteActivityLog,
 }: {
   activityLogs: ActivityLog[];
   currentUserId: string | undefined;
   isAdmin: boolean;
   isSaving: boolean;
+  members: Member[];
   onDeleteActivityLog: (activityLog: ActivityLog) => void;
 }) {
   const recentLogs = activityLogs.slice(0, 8);
+  const memberNameByUserId = new Map(
+    members.map((member) => [member.userId, member.displayNameSnapshot]),
+  );
 
   return (
     <section className="panel flex flex-col gap-4">
@@ -1085,7 +1091,8 @@ function ActivityFeedPanel({
                   <p className="truncate font-bold text-brand-strong">
                     {activityLog.activityNameSnapshot}
                   </p>
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                  <p className="truncate text-xs font-bold uppercase tracking-wide text-muted">
+                    Von {memberNameByUserId.get(activityLog.userId) ?? "Unbekannt"} -{" "}
                     {activityLog.activityDate?.toLocaleDateString("de-DE") ?? "Kein Datum"}
                   </p>
                 </div>

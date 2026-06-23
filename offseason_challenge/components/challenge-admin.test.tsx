@@ -534,7 +534,7 @@ describe("ChallengeAdmin", () => {
       />,
     );
 
-    await screen.findByText("Running");
+    expect((await screen.findAllByText("Running")).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /^entfernen$/i }));
 
     await waitFor(() => {
@@ -614,7 +614,7 @@ describe("ChallengeAdmin", () => {
       />,
     );
 
-    await screen.findByText("Running");
+    expect((await screen.findAllByText("Running")).length).toBeGreaterThan(0);
     expect(screen.getByText("Cycling")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^entfernen$/i })).toHaveLength(1);
 
@@ -623,6 +623,91 @@ describe("ChallengeAdmin", () => {
     await waitFor(() => {
       expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
     });
+  });
+
+  it("shows who completed each recent activity", async () => {
+    mocks.listenChallenge.mockImplementation((_id, onData) => {
+      onData({
+        id: "challenge-1",
+        name: "Summer Challenge",
+        description: "Preseason setup",
+        status: "active",
+        adminIds: ["admin-1"],
+        createdBy: "admin-1",
+        startsAt: new Date("2026-06-01"),
+        endsAt: new Date("2026-08-31"),
+      });
+
+      return vi.fn();
+    });
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-1",
+            displayNameSnapshot: "Player One",
+            emailSnapshot: "player@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Player Two",
+            emailSnapshot: "player-two@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+        activityLogs: [
+          {
+            id: "log-1",
+            userId: "user-1",
+            teamId: null,
+            activityRuleId: "rule-1",
+            activityNameSnapshot: "Running",
+            activityDate: new Date("2026-06-05"),
+            calculatedPoints: 5,
+            finalPoints: 5,
+            status: "accepted",
+            createdAt: null,
+          },
+          {
+            id: "log-2",
+            userId: "user-2",
+            teamId: null,
+            activityRuleId: "rule-2",
+            activityNameSnapshot: "Cycling",
+            activityDate: new Date("2026-06-06"),
+            calculatedPoints: 3,
+            finalPoints: 3,
+            status: "accepted",
+            createdAt: null,
+          },
+        ],
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Running");
+    expect(screen.getByText(/von player one/i)).toBeInTheDocument();
+    expect(screen.getByText(/von player two/i)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /erledigte aktivitaeten/i })).not.toBeInTheDocument();
   });
 
   it("lets members add completed activity with a date", async () => {
