@@ -653,6 +653,10 @@ function ChallengePane({
           isSaving={isSaving}
           onCreateActivityLog={onCreateActivityLog}
         />
+        <MyActivityOverviewPanel
+          activityLogs={activityLogs}
+          currentUserId={currentMember?.userId}
+        />
         <ActivityFeedPanel
           activityLogs={activityLogs}
           currentUserId={currentMember?.userId}
@@ -1044,6 +1048,65 @@ function ActivitySubmissionPanel({
             Aktivitaet eintragen
           </button>
         </form>
+      )}
+    </section>
+  );
+}
+
+function MyActivityOverviewPanel({
+  activityLogs,
+  currentUserId,
+}: {
+  activityLogs: ActivityLog[];
+  currentUserId: string | undefined;
+}) {
+  const myActivityLogs = currentUserId
+    ? activityLogs.filter((activityLog) => activityLog.userId === currentUserId)
+    : [];
+  const totalPoints = myActivityLogs.reduce(
+    (sum, activityLog) => sum + activityLog.finalPoints,
+    0,
+  );
+
+  return (
+    <section className="panel flex min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow">Meine Aktivitaeten</p>
+          <h2 className="text-xl font-bold text-brand-strong">Erledigte Aktivitaeten</h2>
+        </div>
+        <div className="flex flex-shrink-0 flex-col items-end text-right">
+          <strong className="text-xl font-black text-brand-strong">{totalPoints}</strong>
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">
+            Punkte
+          </span>
+        </div>
+      </div>
+      {myActivityLogs.length === 0 ? (
+        <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
+          Du hast noch keine Aktivitaeten eingetragen.
+        </p>
+      ) : (
+        <div className="grid gap-2">
+          {myActivityLogs.map((activityLog) => (
+            <div
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-line bg-surface-soft/30 p-3"
+              key={activityLog.id}
+            >
+              <div className="min-w-0">
+                <p className="truncate font-bold text-brand-strong">
+                  {activityLog.activityNameSnapshot}
+                </p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                  {activityLog.activityDate?.toLocaleDateString("de-DE") ?? "Kein Datum"}
+                </p>
+              </div>
+              <strong className="text-lg font-black text-brand-strong">
+                {activityLog.finalPoints}
+              </strong>
+            </div>
+          ))}
+        </div>
       )}
     </section>
   );
