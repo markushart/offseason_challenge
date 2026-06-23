@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChallengeAdmin } from "@/components/challenge-admin";
@@ -625,7 +625,7 @@ describe("ChallengeAdmin", () => {
     });
   });
 
-  it("shows members an overview of their completed activities", async () => {
+  it("shows who completed each recent activity", async () => {
     mocks.listenChallenge.mockImplementation((_id, onData) => {
       onData({
         id: "challenge-1",
@@ -650,6 +650,15 @@ describe("ChallengeAdmin", () => {
             userId: "user-1",
             displayNameSnapshot: "Player One",
             emailSnapshot: "player@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Player Two",
+            emailSnapshot: "player-two@example.com",
             teamId: null,
             role: "participant",
             status: "active",
@@ -695,15 +704,10 @@ describe("ChallengeAdmin", () => {
       />,
     );
 
-    const myActivityHeading = await screen.findByRole("heading", {
-      name: /erledigte aktivitaeten/i,
-    });
-    const myActivityPanel = myActivityHeading.closest("section");
-
-    expect(myActivityPanel).not.toBeNull();
-    expect(within(myActivityPanel as HTMLElement).getByText("Running")).toBeInTheDocument();
-    expect(within(myActivityPanel as HTMLElement).getAllByText("5").length).toBeGreaterThan(0);
-    expect(within(myActivityPanel as HTMLElement).queryByText("Cycling")).not.toBeInTheDocument();
+    await screen.findByText("Running");
+    expect(screen.getByText(/von player one/i)).toBeInTheDocument();
+    expect(screen.getByText(/von player two/i)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /erledigte aktivitaeten/i })).not.toBeInTheDocument();
   });
 
   it("lets members add completed activity with a date", async () => {
