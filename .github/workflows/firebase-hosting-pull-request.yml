@@ -40,16 +40,33 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
       - name: Deploy Firebase Hosting preview
         run: |
-          npx -y firebase-tools@latest hosting:channel:deploy \
+          for attempt in 1 2 3; do
+            npx -y firebase-tools@latest hosting:channel:deploy \
             "pr-${{ github.event.pull_request.number }}" \
             --expires 7d \
-            --project "$FIREBASE_PROJECT_ID"
+            --project "$FIREBASE_PROJECT_ID" && exit 0
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep 10
+            fi
+          done
+
+          exit 1
       - name: Read Firebase Hosting preview URL
         id: preview_url
         run: |
-          npx -y firebase-tools@latest hosting:channel:list \
+          for attempt in 1 2 3; do
+            npx -y firebase-tools@latest hosting:channel:list \
             --project "$FIREBASE_PROJECT_ID" \
-            --json > "$RUNNER_TEMP/firebase-channels.json"
+            --json > "$RUNNER_TEMP/firebase-channels.json" && break
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep 10
+          done
+
           node <<'NODE'
           const fs = require("fs");
           const path = `${process.env.RUNNER_TEMP}/firebase-channels.json`;
