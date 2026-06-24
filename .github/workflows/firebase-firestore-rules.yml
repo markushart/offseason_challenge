@@ -15,14 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIREBASE_PROJECT_ID: offseason-challenge
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
       - name: Write Firebase service account
-        run: printf "%s" "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+        run: |
+          credentials_path="$RUNNER_TEMP/firebase-service-account.json"
+          printf "%s" "$FIREBASE_SERVICE_ACCOUNT" > "$credentials_path"
+          printf "GOOGLE_APPLICATION_CREDENTIALS=%s\n" "$credentials_path" >> "$GITHUB_ENV"
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
       - name: Deploy Firestore rules and indexes
