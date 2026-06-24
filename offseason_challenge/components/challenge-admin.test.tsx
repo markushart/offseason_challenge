@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChallengeAdmin } from "@/components/challenge-admin";
@@ -539,6 +539,78 @@ describe("ChallengeAdmin", () => {
 
     await waitFor(() => {
       expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-1");
+    });
+  });
+
+  it("lets admins expand the activity feed and remove older entries", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const activityLogs = Array.from({ length: 9 }, (_, index) => ({
+      id: `log-${index + 1}`,
+      userId: "user-2",
+      teamId: null,
+      activityRuleId: "rule-1",
+      activityNameSnapshot: index === 8 ? "Old Activity" : `Activity ${index + 1}`,
+      activityDate: new Date(`2026-06-${String(index + 1).padStart(2, "0")}`),
+      calculatedPoints: 5,
+      finalPoints: 5,
+      status: "accepted" as const,
+      createdAt: null,
+    }));
+    mocks.listenChallengeDetail.mockImplementation((_challengeId, onData) => {
+      onData({
+        teams: [],
+        invites: [],
+        activityRules: [],
+        members: [
+          {
+            userId: "user-1",
+            displayNameSnapshot: "Admin User",
+            emailSnapshot: "admin@example.com",
+            teamId: null,
+            role: "admin",
+            status: "active",
+            joinedAt: null,
+          },
+          {
+            userId: "user-2",
+            displayNameSnapshot: "Player Two",
+            emailSnapshot: "player-two@example.com",
+            teamId: null,
+            role: "participant",
+            status: "active",
+            joinedAt: null,
+          },
+        ],
+        activityLogs,
+      });
+
+      return vi.fn();
+    });
+
+    render(
+      <ChallengeAdmin
+        selectedChallengeId="challenge-1"
+        onChallengeCreated={() => {}}
+        onChallengeDeleted={() => {}}
+      />,
+    );
+
+    await screen.findByText("Activity 1");
+    expect(screen.queryByText("Old Activity")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /alle anzeigen/i }));
+
+    const oldActivityName = await screen.findByText("Old Activity");
+    const oldActivityCard = oldActivityName.closest("div")?.parentElement?.parentElement;
+
+    expect(oldActivityCard).toBeTruthy();
+    await user.click(
+      within(oldActivityCard as HTMLElement).getByRole("button", { name: /^entfernen$/i }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.deleteActivityLog).toHaveBeenCalledWith("challenge-1", "log-9");
     });
   });
 

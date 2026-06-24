@@ -48,6 +48,8 @@
 - Added member activity submission with completion dates.
 - Added deletion of mistaken activity entries by the submitting member or competition admin.
 - Added recent activity feed and standings from accepted activity logs.
+- Added participant names to recent activity feed entries.
+- Added an expandable recent activity feed so older activity entries can be reached and removed.
 - Added admin removal of activity rules.
 - Added admin promotion of active participants to admins.
 - Updated standings to calculate team points from each active member's current team assignment, so points follow a participant after team assignment.
@@ -57,9 +59,11 @@
 - Captured mobile-first UX as a primary frontend requirement.
 - Added Vitest and Testing Library coverage for the challenge admin team creation flow.
 - Updated Firebase Hosting workflows to run lint, tests, and build before deploy.
+- Updated GitHub Actions deploy workflows to use Node 24 and direct Firebase CLI deploys.
 - Added a Firestore rules/indexes deploy workflow for rule changes pushed to `develop` or `main`.
 - Added Firebase Hosting `predeploy` hook to run the same CI gate for manual Hosting deploys.
 - Deployed prototype Firestore rules and indexes for the first challenge-admin workflow.
+- Added explicit browser-local Firebase Auth persistence and removed forced Google account selection.
 - Added `docs/development.md` with current commands, testing rules, and deployment notes.
 
 ## Stashed / Delayed Features

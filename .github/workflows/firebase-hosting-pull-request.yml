@@ -6,6 +6,7 @@ on: pull_request
 permissions:
   checks: write
   contents: read
+  issues: write
   pull-requests: write
 jobs:
   build_and_preview:
@@ -18,14 +19,75 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      NEXT_PUBLIC_USE_FIREBASE_EMULATORS: false
+      NEXT_PUBLIC_USE_FIREBASE_EMULATORS: "false"
+      FIREBASE_PROJECT_ID: offseason-challenge
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: offseason_challenge/package-lock.json
       - name: Install and Build
         run: npm ci && npm run ci
         working-directory: offseason_challenge
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
-          projectId: offseason-challenge
+      - name: Write Firebase service account
+        run: |
+          credentials_path="$RUNNER_TEMP/firebase-service-account.json"
+          printf "%s" "$FIREBASE_SERVICE_ACCOUNT" > "$credentials_path"
+          printf "GOOGLE_APPLICATION_CREDENTIALS=%s\n" "$credentials_path" >> "$GITHUB_ENV"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
+      - name: Deploy Firebase Hosting preview
+        run: |
+          for attempt in 1 2 3; do
+            npx -y firebase-tools@latest hosting:channel:deploy \
+            "pr-${{ github.event.pull_request.number }}" \
+            --expires 7d \
+            --project "$FIREBASE_PROJECT_ID" && exit 0
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep 10
+            fi
+          done
+
+          exit 1
+      - name: Read Firebase Hosting preview URL
+        id: preview_url
+        run: |
+          for attempt in 1 2 3; do
+            npx -y firebase-tools@latest hosting:channel:list \
+            --project "$FIREBASE_PROJECT_ID" \
+            --json > "$RUNNER_TEMP/firebase-channels.json" && break
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          node <<'NODE'
+          const fs = require("fs");
+          const path = `${process.env.RUNNER_TEMP}/firebase-channels.json`;
+          const data = JSON.parse(fs.readFileSync(path, "utf8"));
+          const channelId = `pr-${process.env.PR_NUMBER}`;
+          const channels = data.result?.channels ?? [];
+          const channel = channels.find((item) => item.name?.endsWith(`/channels/${channelId}`));
+          const previewUrl = channel?.url;
+
+          if (!previewUrl) {
+            throw new Error(`Firebase preview URL for ${channelId} was not found.`);
+          }
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `preview_url=${previewUrl}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Firebase Hosting preview: ${previewUrl}\n`);
+          NODE
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+      - name: Comment preview URL
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body "Firebase Hosting preview: ${{ steps.preview_url.outputs.preview_url }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

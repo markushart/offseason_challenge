@@ -6,6 +6,7 @@
 - Rendering/deploy target: static Next export generated into `offseason_challenge/out`.
 - Hosting: Firebase Hosting serves `offseason_challenge/out`.
 - Auth: Firebase Authentication with Google and email/password sign-in.
+- Auth persistence: Firebase Auth explicitly uses browser-local persistence, and Google sign-in no longer forces account selection on every sign-in attempt.
 - Data: Cloud Firestore Standard / native mode, `(default)` database, location `nam5`.
 - Current signed-in product surface: mobile-first challenge dashboard with separate Challenge and Admin panes.
 - Current challenge member capabilities:
@@ -14,7 +15,8 @@
   - see team standings
   - expand a team to see participant scores
   - add completed fixed-point activities with a completion date
-  - see recent activity
+  - see recent activity with the participant name for each entry
+  - expand the recent activity feed to reach older entries
 - Current admin capabilities:
   - create a challenge
   - become the initial admin of that challenge
@@ -62,16 +64,22 @@ npm run ci --prefix offseason_challenge
 
 Firebase Hosting is configured with a `predeploy` hook that runs the same check before manual Hosting deploys. GitHub Hosting workflows also run `npm run ci --prefix offseason_challenge` before deploy or preview deploy.
 
-For normal feature work in this repository, commit and push verified changes to `develop`. The `develop` push starts the preview build workflow. Merging to `main` starts the live Firebase Hosting deploy workflow.
+For normal feature work in this repository, commit and push verified changes to `develop`. Open or update a pull request from `develop` to `main` to start the Firebase Hosting preview workflow. Merging to `main` starts the live Firebase Hosting deploy workflow.
 
 ## Current Test Coverage
 
 - `offseason_challenge/components/challenge-admin.test.tsx`
-  - Covers team creation, challenge archive, member standings, participant promotion/removal, activity rule removal, and member activity submission.
+  - Covers team creation, challenge archive, member standings, participant promotion/removal, activity rule removal, member activity submission, participant names in the activity feed, and expanding the feed to remove older entries.
 - `offseason_challenge/lib/challenges.join.test.ts`
   - Covers reusable invite creation, challenge archive, participant promotion/removal, invite joins, activity rule deletion, and activity log writes.
 
 ## Deployment Notes
+
+GitHub Actions use Node 24 explicitly. Hosting workflows deploy through `npx -y firebase-tools@latest` instead of `FirebaseExtended/action-hosting-deploy@v0`.
+
+Firebase Hosting preview deploys run from `.github/workflows/firebase-hosting-pull-request.yml` on pull requests. The preview channel name is `pr-<pull request number>` and expires after 7 days.
+
+Firebase Hosting live deploys run from `.github/workflows/firebase-hosting-merge.yml` on pushes to `main`.
 
 Firestore rules and indexes are deployed by `.github/workflows/firebase-firestore-rules.yml` on pushes to `develop` or `main` when `firestore.rules`, `firestore.indexes.json`, or `firebase.json` changes.
 

@@ -12,7 +12,7 @@
 
 ## Phase 1: Authentication and Profiles
 
-- Implement sign up, sign in, sign out. Google sign-in is done.
+- Implement sign up, sign in, sign out. Google sign-in, email/password sign-in, and explicit browser-local auth persistence are done.
 - Create user profile document after registration.
 - Add protected routes / protected signed-in app shell. Initial Auth shell is done.
 - Show current user state in the app shell. Done.
@@ -53,7 +53,7 @@
 
 - Show participant points.
 - Show team standings. Initial version is done and sums accepted logs by each active member's current team assignment.
-- Show recent activity feed. Initial version is done.
+- Show recent activity feed. Initial version is done, including participant names and expansion for older entries.
 - Add filters by week, team, participant, and activity category.
 - Add weekly cap handling for extra / replacement points.
 
@@ -79,7 +79,7 @@ Before any deploy, run:
 npm run ci --prefix offseason_challenge
 ```
 
-New development must include lightweight tests appropriate to the change before deployment. The current deploy workflows and Firebase Hosting `predeploy` hook run CI automatically. Firestore rule/index changes are deployed by the dedicated Firestore workflow when pushed to `develop` or `main`.
+New development must include lightweight tests appropriate to the change before deployment. The current deploy workflows and Firebase Hosting `predeploy` hook run CI automatically. Firebase Hosting previews run on pull requests, live Hosting deploys run on pushes to `main`, and Firestore rule/index changes are deployed by the dedicated Firestore workflow when pushed to `develop` or `main`.
 
 ## Initial Technical Choices
 
