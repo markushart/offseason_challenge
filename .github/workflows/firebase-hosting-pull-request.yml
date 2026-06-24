@@ -6,6 +6,7 @@ on: pull_request
 permissions:
   checks: write
   contents: read
+  issues: write
   pull-requests: write
 jobs:
   build_and_preview:
@@ -38,8 +39,53 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
       - name: Deploy Firebase Hosting preview
+        id: deploy_preview
         run: |
           npx -y firebase-tools@latest hosting:channel:deploy \
             "pr-${{ github.event.pull_request.number }}" \
             --expires 7d \
-            --project "$FIREBASE_PROJECT_ID"
+            --project "$FIREBASE_PROJECT_ID" \
+            --json > "$RUNNER_TEMP/firebase-preview.json"
+
+          node <<'NODE'
+          const fs = require("fs");
+          const path = `${process.env.RUNNER_TEMP}/firebase-preview.json`;
+          const data = JSON.parse(fs.readFileSync(path, "utf8"));
+          const urls = [];
+
+          const visit = (value) => {
+            if (typeof value === "string" && value.startsWith("https://") && value.includes(".web.app")) {
+              urls.push(value);
+              return;
+            }
+
+            if (Array.isArray(value)) {
+              value.forEach(visit);
+              return;
+            }
+
+            if (value && typeof value === "object") {
+              Object.values(value).forEach(visit);
+            }
+          };
+
+          visit(data);
+
+          const channelId = `pr-${process.env.PR_NUMBER}`;
+          const previewUrl = urls.find((url) => url.includes(`--${channelId}-`)) ?? urls[0];
+
+          if (!previewUrl) {
+            throw new Error("Firebase preview URL was not found in deploy output.");
+          }
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `preview_url=${previewUrl}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Firebase Hosting preview: ${previewUrl}\n`);
+          NODE
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+      - name: Comment preview URL
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body "Firebase Hosting preview: ${{ steps.deploy_preview.outputs.preview_url }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
