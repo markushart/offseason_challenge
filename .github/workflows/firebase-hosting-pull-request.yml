@@ -39,43 +39,28 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OFFSEASON_CHALLENGE }}
       - name: Deploy Firebase Hosting preview
-        id: deploy_preview
         run: |
           npx -y firebase-tools@latest hosting:channel:deploy \
             "pr-${{ github.event.pull_request.number }}" \
             --expires 7d \
+            --project "$FIREBASE_PROJECT_ID"
+      - name: Read Firebase Hosting preview URL
+        id: preview_url
+        run: |
+          npx -y firebase-tools@latest hosting:channel:list \
             --project "$FIREBASE_PROJECT_ID" \
-            --json > "$RUNNER_TEMP/firebase-preview.json"
-
+            --json > "$RUNNER_TEMP/firebase-channels.json"
           node <<'NODE'
           const fs = require("fs");
-          const path = `${process.env.RUNNER_TEMP}/firebase-preview.json`;
+          const path = `${process.env.RUNNER_TEMP}/firebase-channels.json`;
           const data = JSON.parse(fs.readFileSync(path, "utf8"));
-          const urls = [];
-
-          const visit = (value) => {
-            if (typeof value === "string" && value.startsWith("https://") && value.includes(".web.app")) {
-              urls.push(value);
-              return;
-            }
-
-            if (Array.isArray(value)) {
-              value.forEach(visit);
-              return;
-            }
-
-            if (value && typeof value === "object") {
-              Object.values(value).forEach(visit);
-            }
-          };
-
-          visit(data);
-
           const channelId = `pr-${process.env.PR_NUMBER}`;
-          const previewUrl = urls.find((url) => url.includes(`--${channelId}-`)) ?? urls[0];
+          const channels = data.result?.channels ?? [];
+          const channel = channels.find((item) => item.name?.endsWith(`/channels/${channelId}`));
+          const previewUrl = channel?.url;
 
           if (!previewUrl) {
-            throw new Error("Firebase preview URL was not found in deploy output.");
+            throw new Error(`Firebase preview URL for ${channelId} was not found.`);
           }
 
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `preview_url=${previewUrl}\n`);
@@ -86,6 +71,6 @@ jobs:
       - name: Comment preview URL
         run: |
           gh pr comment "${{ github.event.pull_request.number }}" \
-            --body "Firebase Hosting preview: ${{ steps.deploy_preview.outputs.preview_url }}"
+            --body "Firebase Hosting preview: ${{ steps.preview_url.outputs.preview_url }}"
         env:
           GH_TOKEN: ${{ github.token }}
