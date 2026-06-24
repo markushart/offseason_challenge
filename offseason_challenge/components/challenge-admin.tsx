@@ -1065,7 +1065,9 @@ function ActivityFeedPanel({
   members: Member[];
   onDeleteActivityLog: (activityLog: ActivityLog) => void;
 }) {
-  const recentLogs = activityLogs.slice(0, 8);
+  const [showAllLogs, setShowAllLogs] = useState(false);
+  const visibleLogs = showAllLogs ? activityLogs : activityLogs.slice(0, 8);
+  const hiddenLogCount = Math.max(0, activityLogs.length - visibleLogs.length);
   const memberNameByUserId = new Map(
     members.map((member) => [member.userId, member.displayNameSnapshot]),
   );
@@ -1075,13 +1077,13 @@ function ActivityFeedPanel({
       <h2 className="text-lg font-bold uppercase tracking-wider text-brand-strong">
         Letzte Aktivitaeten
       </h2>
-      {recentLogs.length === 0 ? (
+      {visibleLogs.length === 0 ? (
         <p className="rounded-lg bg-surface-soft p-4 text-sm font-medium text-muted">
           Es wurden noch keine Aktivitaeten eingetragen.
         </p>
       ) : (
         <div className="grid gap-2">
-          {recentLogs.map((activityLog) => (
+          {visibleLogs.map((activityLog) => (
             <div
               className="min-w-0 rounded-lg border border-line bg-surface-soft/30 p-3"
               key={activityLog.id}
@@ -1114,6 +1116,17 @@ function ActivityFeedPanel({
               </div>
             </div>
           ))}
+          {activityLogs.length > 8 ? (
+            <button
+              className="rounded border border-line px-3 py-2 text-xs font-black uppercase tracking-widest text-brand-strong hover:bg-surface-soft"
+              onClick={() => setShowAllLogs((current) => !current)}
+              type="button"
+            >
+              {showAllLogs
+                ? "Weniger anzeigen"
+                : `Alle anzeigen (${hiddenLogCount} weitere)`}
+            </button>
+          ) : null}
         </div>
       )}
     </section>

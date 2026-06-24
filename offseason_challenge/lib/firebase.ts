@@ -1,7 +1,9 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
+  browserLocalPersistence,
   connectAuthEmulator,
   getAuth,
+  setPersistence,
   type Auth,
 } from "firebase/auth";
 import {
@@ -35,6 +37,11 @@ export const app: FirebaseApp | null = hasFirebaseConfig
 
 export const auth: Auth | null = app ? getAuth(app) : null;
 export const db: Firestore | null = app ? getFirestore(app) : null;
+export const authPersistenceReady = auth
+  ? setPersistence(auth, browserLocalPersistence).catch((error: unknown) => {
+      console.warn("Firebase auth persistence could not be set.", error);
+    })
+  : Promise.resolve();
 
 type EmulatorWindow = Window & {
   __OFFSEASON_AUTH_EMULATOR_CONNECTED__?: boolean;

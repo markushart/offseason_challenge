@@ -15,10 +15,9 @@ import {
   type ReactNode,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
-import { auth, hasFirebaseConfig } from "@/lib/firebase";
+import { auth, authPersistenceReady, hasFirebaseConfig } from "@/lib/firebase";
 
 type AuthShellProps = {
   children: ReactNode;
@@ -67,21 +66,29 @@ export function AuthShell({ children }: AuthShellProps) {
   const [authMode, setAuthMode] = useState<"signIn" | "create">("signIn");
   const [error, setError] = useState<string | null>(null);
 
-  const googleProvider = useMemo(() => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    return provider;
-  }, []);
-
   useEffect(() => {
     if (!auth) {
       return;
     }
 
-    return onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsLoading(false);
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
+
+    authPersistenceReady.then(() => {
+      if (!isMounted || !auth) {
+        return;
+      }
+
+      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setIsLoading(false);
+      });
     });
+
+    return () => {
+      isMounted = false;
+      unsubscribe?.();
+    };
   }, []);
 
   const handleGoogleSignUp = async () => {
@@ -94,6 +101,8 @@ export function AuthShell({ children }: AuthShellProps) {
     setIsSigningIn(true);
 
     try {
+      await authPersistenceReady;
+      const googleProvider = new GoogleAuthProvider();
       await signInWithPopup(auth, googleProvider);
     } catch (signInError) {
       setError(getAuthMessage(signInError));
@@ -129,6 +138,7 @@ export function AuthShell({ children }: AuthShellProps) {
     setIsSigningIn(true);
 
     try {
+      await authPersistenceReady;
       if (authMode === "create") {
         await createUserWithEmailAndPassword(auth, email, password);
       } else {
